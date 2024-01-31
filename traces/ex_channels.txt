@@ -1,0 +1,96 @@
+Channel 1:
+	scid: 767921x738x1/0
+	source: 1 
+	destination: 2 
+	timestamp: 1678989356
+	features: 
+	fee_base_msat: 0
+	fee_proportional_millionths: 0
+	htlc_minimim_msat: 1
+	htlc_maximum_msat: 30
+	cltv_expi0ry_delta: 34
+	id: 03afa7a8196dbca763ee6f9a34b634a7adc03f154e5d6979fe654db5606b5fb2b1
+Channel 2:
+	scid: 769274x1230x0/0
+	source: 2 
+	destination: 1 
+	timestamp: 1678670658
+	features: 
+	fee_base_msat: 0
+	fee_proportional_millionths: 0
+	htlc_minimim_msat: 50000
+	htlc_maximum_msat: 30
+	cltv_expiry_delta: 34
+	id: 02dd4a9cf224e290851f6af83072e2496479bdf4b65e1733e92e24d42a0ba89a75
+Channel 3:
+	scid: 767923x1724x1/0
+	source: 1 
+	destination: 3 
+	timestamp: 1678939859
+	features: 
+	fee_base_msat: 0
+	fee_proportional_millionths: 0
+	htlc_minimim_msat: 1
+	htlc_maximum_msat: 30
+	cltv_expiry_delta: 34
+	id: 0246fa5a916ad904798c374fad52756c0f4a29398c1b202406ab8a00c479cc4361
+Channel 4:
+	scid: 774242x1916x1/0
+	source: 3 
+	destination: 1 
+	timestamp: 1678981838
+	features: 
+	fee_base_msat: 0
+	fee_proportional_millionths: 0
+	htlc_minimim_msat: 0
+	htlc_maximum_msat: 30
+	cltv_expiry_delta: 34
+	id: 0296b2db342fcf87ea94d981757fdf4d3e545bd5cef4919f58b5d38dfdd73bf5c9
+Channel 5:
+	scid: 768207x866x1/0
+	source: 2 
+	destination: 4
+	timestamp: 1679004556
+	features: 
+	fee_base_msat: 0
+	fee_proportional_millionths: 0
+	htlc_minimim_msat: 1
+	htlc_maximum_msat: 30
+	cltv_expiry_delta: 34
+	id: 02b21ca992bf95e3f324302265ad86cec24f36166fd7afca44efa0809aaa8b25c5
+Channel 6:
+	scid: 767838x1198x0/0
+	source: 4 
+	destination: 2 
+	timestamp: 1678768052
+	features: 
+	fee_base_msat: 0
+	fee_proportional_millionths: 0
+	htlc_minimim_msat: 0
+	htlc_maximum_msat: 30
+	cltv_expiry_delta: 34
+	id: 0357426a790617bb9ffdf3da6ebb24775753b99120d5cfa464de26a9eb8a0e05ee
+Channel 7:
+	scid: 767901x1675x1/0
+	source: 3
+	destination: 4 
+	timestamp: 1679089351
+	features: 
+	fee_base_msat: 0
+	fee_proportional_millionths: 0
+	htlc_minimim_msat: 0
+	htlc_maximum_msat: 30
+	cltv_expiry_delta: 34
+	id: 035e4ff418fc8b5554c5d9eea66396c227bd429a3251c8cbc711002ba215bfc226
+Channel 8:
+	scid: 770399x2572x0/0
+	source: 4 
+	destination: 3 
+	timestamp: 1679089360
+	features: 
+	fee_base_msat: 0
+	fee_proportional_millionths: 0
+	htlc_minimim_msat: 0
+	htlc_maximum_msat: 30
+	cltv_expiry_delta: 34
+	id: 02415d7ec37a7bb22b27ed675f0810090392be6b3143d1186f80ba2dd8d76b07fa

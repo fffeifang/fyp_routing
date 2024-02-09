@@ -105,8 +105,8 @@ def setup():
 	#pos = nx.spectral_layout(G)
 	# for node, coordinates in pos.items():
 	# 	G.nodes[node]["pos"] = coordinates
-
-	spanning_tree = nx.minimum_spanning_tree(G)
+	G_undirected = G.to_undirected()
+	spanning_tree = nx.minimum_spanning_tree(G_undirected)
 	#consider hops as distance
 	length_matrix = np.zeros((len(G), len(G)))
 	for i, node_i in enumerate(G.nodes()):
@@ -149,7 +149,7 @@ def generate_payments(seed, nflows, G):
 	src_dst = get_sdpair(len(G), nflows*1000)
     
 	# sample transaction value from poisson distribution based on https://coinloan.io/blog/what-is-lightning-network-key-facts-and-figures/
-	mean = 5084840000 #*10
+	mean = 50848400000 #*100
 	quantity = np.random.poisson(mean, nflows)
 
 	while True:

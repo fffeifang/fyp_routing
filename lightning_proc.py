@@ -173,8 +173,8 @@ def generate_payments(seed, nflows, G):
 		tmp = list(G.nodes())
 		#print(tmp)
 		src, dst = tmp[src], tmp[dst]
-		# if not nx.has_path(G, src, dst):
-		# 	continue
+		if not nx.has_path(G, src, dst):
+			continue
 
 		# sample transaction value
 		val = random.choice(quantity)

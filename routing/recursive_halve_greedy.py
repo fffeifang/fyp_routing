@@ -41,7 +41,7 @@ import collections
 
 
 
-def greedy(G, src, dst, k = 10):
+def greedy(G, src, dst, k = 16):
     paths = []
     first_path = nx.shortest_path(G, src, dst)
     paths.append(first_path)
@@ -209,3 +209,4 @@ def routing(G, cur_payments):
     print(overallpayment)
     print(throughput_total)
     return num_delivered, throughput_pay, throughput_total, success_ratio, success_volume
+ 

@@ -74,5 +74,5 @@ medium channel capacity 1487541000.0
 medium channel base fee 1.0
 medium channel proportion 20.0
 
-#what to do next
+# what to do next
 yen's k  shortest path/nx.all_shortest_paths

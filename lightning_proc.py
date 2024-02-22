@@ -107,40 +107,40 @@ def setup():
 	# 	G.nodes[node]["pos"] = coordinates
 
 	#spanning tree
-	G_undirected = G.to_undirected()
-	connected_components = list(nx.connected_components(G_undirected))
-	print(len(connected_components))
-	spanning_trees = []
-	node_to_tree = {} 
-	for k, component in  enumerate(connected_components):
-		subgraph = G_undirected.subgraph(component).copy()
-		st = nx.minimum_spanning_tree(subgraph)
-		spanning_trees.append(st)
-		for node in component:
-			node_to_tree[node] = k
+	# G_undirected = G.to_undirected()
+	# connected_components = list(nx.connected_components(G_undirected))
+	# print(len(connected_components))
+	# spanning_trees = []
+	# node_to_tree = {} 
+	# for k, component in  enumerate(connected_components):
+	# 	subgraph = G_undirected.subgraph(component).copy()
+	# 	st = nx.minimum_spanning_tree(subgraph)
+	# 	spanning_trees.append(st)
+	# 	for node in component:
+	# 		node_to_tree[node] = k
 
-	length_matrix = np.zeros((len(G), len(G)))
+	# length_matrix = np.zeros((len(G), len(G)))
 
-	#consider hops as distance
-	for i, node_i in enumerate(G.nodes()):
-		for j, node_j in enumerate(G.nodes()):
-			if i != j:
-				if node_i in node_to_tree and node_j in node_to_tree and node_to_tree[node_i] == node_to_tree[node_j]:
-					tree_index = node_to_tree[node_i]
-					length = nx.shortest_path_length(spanning_trees[tree_index], node_i, node_j)
-					length_matrix[i, j] = length
+	# #consider hops as distance
+	# for i, node_i in enumerate(G.nodes()):
+	# 	for j, node_j in enumerate(G.nodes()):
+	# 		if i != j:
+	# 			if node_i in node_to_tree and node_j in node_to_tree and node_to_tree[node_i] == node_to_tree[node_j]:
+	# 				tree_index = node_to_tree[node_i]
+	# 				length = nx.shortest_path_length(spanning_trees[tree_index], node_i, node_j)
+	# 				length_matrix[i, j] = length
 		
-	#MDS
-	mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42, n_init=4, max_iter=100)
-	pos = mds.fit_transform(length_matrix)
-	pos_dict = {node: pos[i] for i, node in enumerate(G.nodes())}
-	#t-SNE
-	# tsne = TSNE(n_components=2, random_state=42)
-	# pos_array = tsne.fit_transform(length_matrix)
-	# pos_dict = {node: pos for node, pos in zip(G.nodes(), pos_array)}
+	# #MDS
+	# mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42, n_init=4, max_iter=100)
+	# pos = mds.fit_transform(length_matrix)
+	# pos_dict = {node: pos[i] for i, node in enumerate(G.nodes())}
+	# #t-SNE
+	# # tsne = TSNE(n_components=2, random_state=42)
+	# # pos_array = tsne.fit_transform(length_matrix)
+	# # pos_dict = {node: pos for node, pos in zip(G.nodes(), pos_array)}
 
-	for node, coordinates in pos_dict.items():
-		G.nodes[node]['pos'] = coordinates
+	# for node, coordinates in pos_dict.items():
+	# 	G.nodes[node]['pos'] = coordinates
 	return G
 def get_sdpair(len, count):
 	pairlist = []
@@ -160,7 +160,7 @@ def generate_payments(seed, nflows, G):
 	src_dst = get_sdpair(len(G), nflows*1000)
     
 	# sample transaction value from poisson distribution based on https://coinloan.io/blog/what-is-lightning-network-key-facts-and-figures/
-	mean = 508484000 #*1000
+	mean = 508484000 #msat
 	quantity = np.random.poisson(mean, nflows)
 
 	while True:

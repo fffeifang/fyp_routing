@@ -3,6 +3,7 @@ import lightning_proc_backup
 import routing.proportion_splited_sp as proportion_splited_sp
 import routing.recursive_halved_split_sp as recursive_halved_split_sp
 import routing.proportion_splited_greedy as psg
+import routing.proportion_greedy as pg
 import routing.recursive_halve_greedy as rhg
 import routing.backup as bp
 import routing.flash as flash
@@ -16,7 +17,7 @@ def main():
 
 
     #pay = [[1,2,40,1,0]]
-    rhg.routing(G, pay)
+    pg.routing(G, pay)
 
 if __name__ == "__main__":
  	main()

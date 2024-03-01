@@ -5,99 +5,59 @@ from random import shuffle
 from itertools import islice
 import sys
 import collections
-import queue
+from greedy import greedy_fs
 def findpaths(G, payment, k):
     local_G = G.copy()
+    src = payment[0]
+    dst = payment[1]
     payment_size = payment[2]
+    sub_G = nx.DiGraph()
     path_set = []
     cap_set = []
     solved_size  = 0
-    q = queue.Queue()
-    q.put(payment)
-    bp_backup = -1
-    loop = 0
-    while (not q.empty()) or solved_size < payment_size:
-        loop+=1
-        if(loop > 50):
+    while(solved_size < payment_size):
+        tmp = payment_size - solved_size
+        if(len(path_set) > k):
+            print(solved_size,payment_size)
+            print("flase a")
             return None, None
-        cur_payment = q.get()
-        cur_src = cur_payment[0]
-        cur_dst = cur_payment[1]
-        cur_paymentsize = cur_payment[2]
-        success, bp, cur_path = probpath(local_G, cur_src, cur_dst, cur_paymentsize)
-        if cur_path == []:
-            if bp_backup == -1:
-                return None, None
-            else:
-                next_payment = [bp_backup, cur_dst, cur_paymentsize]
-                q.put(next_payment)
-                continue
-        path_set.append(cur_path)
-        cap_set.append(cur_paymentsize)
-        update_graph_capacity(local_G, cur_path, cur_paymentsize)
-        #print(cur_path)
-        if not success:
-            nextlist, tmp = find_next_nodes(local_G, cur_path[-1], bp, cur_dst, k)
-            if(tmp < cur_paymentsize):
-                return None, None
-            else:
-                for next in nextlist:
-                    next_paymentsize = 0.8 * local_G[bp][next]["capacity"] / tmp * cur_paymentsize
-                    #bp-next update
-                    bp_backup = bp
-                    next_payment = [next, cur_dst, next_paymentsize]
-                    q.put(next_payment)
-        else:
-            if(bp_backup != -1):
-                local_G[bp_backup][cur_src]["capacity"] -= cur_paymentsize + cur_paymentsize * local_G[bp_backup][cur_src]["proportion_fee"] / 1000000 + local_G[bp_backup][cur_src]["base_fee"]
-                local_G[cur_src][bp_backup]["capacity"] += cur_paymentsize + cur_paymentsize * local_G[bp_backup][cur_src]["proportion_fee"] / 1000000 + local_G[bp_backup][cur_src]["base_fee"]
-            solved_size += cur_paymentsize
+        path = greedy(local_G, src, dst)
+        print(path)
+        #path = nx.shortest_path(local_G, src, dst, weight=weighted_capacity)
+        if (path == []):
+            print("false")
+            return None, None
+        path_set.append(path)
+        path_cap = sys.maxsize
+        for i in range(len(path)-1): 
+            path_cap = np.minimum(path_cap, local_G[path[i]][path[i+1]]["capacity"])
+            sub_G.add_edge(path[i], path[i+1], capacity = G[path[i]][path[i+1]]["capacity"])
+            sub_G.add_edge(path[i+1], path[i], capacity = G[path[i+1]][path[i]]["capacity"])
+        #print(path_cap, tmp)
+        while(path_cap < tmp):
+            tmp = tmp/2
+        cap_set.append(tmp)
+        for i in range(len(path)-1):
+            local_G[path[i]][path[i+1]]["capacity"] = local_G[path[i]][path[i+1]]["capacity"]-tmp
+            local_G[path[i+1]][path[i]]["capacity"] = local_G[path[i+1]][path[i]]["capacity"]+tmp
+        solved_size += tmp
+        print(solved_size)
+              
     return path_set, cap_set
 
-def update_graph_capacity(G, path, payment):
-    for i in range(len(path) - 1):
-        G[path[i]][path[i+1]]["capacity"] -= payment + payment * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
-        G[path[i+1]][path[i]]["capacity"] += payment + payment * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
+import collections
 
-def find_next_nodes(G, last, bp, dst, k):
-    tmp = 0
-    nextlist_all = []
-    nextlist = []
-    for next in set(G.neighbors(bp)) - {last}:
-        capacity = G[bp][next]["capacity"]
-        if nx.has_path(G, next, dst) and capacity > 0:
-            tmp += 0.8 * G[bp][next]["capacity"]
-            nextlist_all.append((next, capacity))        
-    nextlist_all.sort(key=lambda x: x[1], reverse=True)
-    if(len(nextlist_all) > k):
-        nextlist_all = nextlist_all[:k]
-    for next, _ in nextlist_all:
-        nextlist.append(next)
-    return nextlist, tmp
-
-def probpath(G, src, dst, payment_size):
-    path =  greedy(G, src, dst)
-    path_cap = sys.maxsize
-    for i in range(len(path)-1): 
-                path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"] - payment_size * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 - G[path[i]][path[i + 1]]["base_fee"])
-                
-                if payment_size/path_cap > 0.8 :
-                    p =  i 
-                    return False, path[p], path[:p]
-    return True, 0, []
- 
 def greedy(G, src, dst):
+    print(src, dst)
     visited = set()
     queue = collections.deque([(src, [src])])
     while queue:
         (vertex, path) = queue.popleft()
-        (x, y) = G.nodes[vertex]["pos"]
-        (x2, y2) = G.nodes[dst]["pos"]
-        cur_dis = (x1 - x2)**2 + (y1 - y2)**2
         visited.add(vertex)
         k = 5 #coefficient
         next_vertex = None
         top_k_nodes = []
+        tmp_cap = -1
         for next in set(G.neighbors(vertex)) - visited:
             capacity = G[vertex][next]["capacity"]
             if(capacity > 0):
@@ -106,24 +66,21 @@ def greedy(G, src, dst):
         if(len(top_k_nodes) > k):
             top_k_nodes = top_k_nodes[:k]
         tmp = sys.maxsize
-        
+        (x2, y2) = G.nodes[dst]["pos"]
         for next, cap in top_k_nodes:
             (x1, y1) = G.nodes[next]["pos"]
             path_len = (x1 - x2)**2 + (y1 - y2)**2
-            if(path_len < tmp):
+            if(path_len < tmp or (path_len == tmp and cap > tmp_cap)):
                 tmp = path_len
-                next_vertex = next
-            elif(path_len == tmp):
-                if(cap > tmp_cap):
-                    tmp = path_len
-                    tmp_cap = cap
-                    next_vertex = next 
+                tmp_cap = cap
+                next_vertex = next 
         if next_vertex is not None:
-            visited.add(next_vertex)
+            # print("the next vertex is", next_vertex)
             if next_vertex == dst:
                 return path + [next_vertex]
             else:
                 queue.append((next_vertex, path + [next_vertex]))
+    
     return []
 
 def split_routing(G, Pset, C, payment_size):
@@ -142,15 +99,10 @@ def split_routing(G, Pset, C, payment_size):
     #judge fee && roil back
     return True, transaction_fees
 
-def direct_routing(G, payment):  
+def direct_routing(G, path, payment):  
     src = payment[0]
     dst = payment[1]
     payment_size = payment[2]
-    try:
-        #path = nx.shortest_path(G, src, dst, weight=weighted_capacity)
-        path = greedy(G, src, dst)
-    except nx.NetworkXNoPath:
-        False, None
     #total_probing_messages += len(path)-1
     transaction_fees = 0
 
@@ -158,7 +110,7 @@ def direct_routing(G, payment):
 
     for i in range(len(path)-1): 
       path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"] - G[path[i]][path[i + 1]]["capacity"] * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 - G[path[i]][path[i + 1]]["base_fee"])
-
+    
     if (path_cap > payment_size):
         sent = payment_size
     else:
@@ -171,6 +123,7 @@ def direct_routing(G, payment):
 
       #fee += G[path[i]][path[i+1]]["cost"]*sent
 
+    print("sent is", sent," payment is", payment[2])
     # fail, roll back 
     if sent < payment[2]:
         for i in range(len(path)-1):
@@ -184,6 +137,16 @@ def direct_routing(G, payment):
         print("direct成功")
         return True, transaction_fees
 
+def update(G, src, dst):
+    if dst in G.nodes[src]['localed_dst']:
+            for item in G.nodes[src]['local_path']:
+                (receiver, pathset) = item 
+                if(receiver == dst):
+                    G.nodes[src]['local_path'].remove(item)
+                    G.nodes[dst]['local_path'].append((dst,greedy_fs(G,src,dst)))
+                    return
+    else:
+        return
 def routing(G, cur_payments):
     throughput_pay = 0
     transaction_fees = 0
@@ -193,7 +156,6 @@ def routing(G, cur_payments):
     throughput_total = 0
     num_splited = 0
     num_direct = 0
-    qwq = 0
     #total_max_path_length = 0
     for payment in cur_payments:
         src = payment[0]
@@ -204,39 +166,54 @@ def routing(G, cur_payments):
         #path = nx.shortest_path(G, src, dst, weight=weighted_capacity)
         if not nx.has_path(G, src, dst):
             continue
-        path = greedy(G, src, dst)
+        if dst in G.nodes[src]['localed_dst']:
+            for item in G.nodes[src]['local_path']:
+                (receiver, pathset) = item 
+                if(receiver == dst):
+                    path, path_sk = pathset[0]
+        else:
+            path = greedy(G, src, dst)
         total_probing_messages += len(path)-1
         print("============================")
         print(payment_size)
         path_cap = sys.maxsize
         flag_split = False
         success = False
-        for i in range(len(path)-1): 
-            path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"] - payment_size * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 - G[path[i]][path[i + 1]]["base_fee"])
-            
-            if payment_size/path_cap > 0.8 or path == []:
-                qwq+=1
-                flag_split = True
-                Pset, C = findpaths(G, payment_copy, 5)
-                if not (Pset is None or C is None):
-                    success = True
-                break
+        if path != []:
+            for i in range(len(path)-1): 
+                path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"]) 
+                
+                if payment_size/path_cap > 0.8:
+                    print("split prob")
+                    flag_split = True
+                    Pset, C = findpaths(G, payment_copy, 10)
+                    if not (Pset is None or C is None):
+                        success = True
+                    break
+        else:
+            print("split prob")
+            flag_split = True
+            Pset, C = findpaths(G, payment_copy, 10)
+            if not (Pset is None or C is None):
+                success = True
+
         if success and flag_split:
             split_success, transaction_fees = split_routing(G, Pset, C, payment_size)
             if split_success is True:
-                print("split") 
+                print("split!") 
                 num_delivered += 1
                 num_splited += 1
                 throughput_pay += payment_size
                 throughput_total += payment_size + transaction_fees  
         elif not (flag_split):
-            direct_success, transaction_fees = direct_routing(G, payment_copy)
+            direct_success, transaction_fees = direct_routing(G, path, payment_copy)
             if direct_success is True:
-                print("direct") 
+                print("direct!") 
                 num_delivered += 1
                 num_direct += 1
                 throughput_pay += payment_size
-                throughput_total += payment_size + transaction_fees    
+                throughput_total += payment_size + transaction_fees
+                update(G, src, dst)    
 
 
     print(num_delivered)
@@ -247,5 +224,4 @@ def routing(G, cur_payments):
     print(throughput_pay)
     print(overallpayment)
     print(throughput_total)
-    print("qwq",qwq)
     return num_delivered, throughput_pay, throughput_total, success_ratio, success_volume

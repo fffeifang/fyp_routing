@@ -4,7 +4,7 @@ import routing.proportion_splited_sp as proportion_splited_sp
 import routing.recursive_halved_split_sp as recursive_halved_split_sp
 import routing.proportion_splited_greedy as psg
 import routing.proportion_greedy as pg
-import routing.recursive_halve_greedy as rhg
+import routing.recursive_halve_greedy_fs as rhg
 import routing.backup as bp
 import routing.flash as flash
 import routing.shortest_path as sp

@@ -5,7 +5,8 @@ import random
 from scipy import stats
 from sklearn.manifold import MDS
 from sklearn.manifold import TSNE
-
+from collections import Counter
+import routing.greedy as gy
 # returns network topology and transactions for Lightning
 
 def setup():
@@ -60,6 +61,9 @@ def setup():
 					# cost = random.random()*10
 					base_fee = float(base_fee),
 					proportion_fee = float(proportion_fee),
+					#local path of frequent nodes
+					local_path = [],
+					localed_dst = []
 				)
 
 	#while  there are nodes with on channel, remove them
@@ -98,6 +102,7 @@ def setup():
 	print('max channel base fee', stats.scoreatpercentile(base_feelist_sorted, 99))
 	print('medium channel proportion', stats.scoreatpercentile(proportion_feelist_sorted, 50))
 	#add property of coordinate
+	#######################################################################################################################################################################
 
 	#api layout
 	#pos = nx.kamada_kawai_layout(G)
@@ -107,42 +112,84 @@ def setup():
 	# 	G.nodes[node]["pos"] = coordinates
 
 	#spanning tree
-	# G_undirected = G.to_undirected()
-	# connected_components = list(nx.connected_components(G_undirected))
-	# print(len(connected_components))
-	# spanning_trees = []
-	# node_to_tree = {} 
-	# for k, component in  enumerate(connected_components):
-	# 	subgraph = G_undirected.subgraph(component).copy()
-	# 	st = nx.minimum_spanning_tree(subgraph)
-	# 	spanning_trees.append(st)
-	# 	for node in component:
-	# 		node_to_tree[node] = k
+	G_undirected = G.to_undirected()
+	connected_components = list(nx.connected_components(G_undirected))
+	print(len(connected_components))
+	spanning_trees = []
+	node_to_tree = {} 
+	covered_nodes = set()
+	for k, component in  enumerate(connected_components):
+		if len(covered_nodes) < len(G.nodes()):
+			subgraph = G_undirected.subgraph(component).copy()
+			st = nx.minimum_spanning_tree(subgraph)
+			spanning_trees.append(st)
+			covered_nodes.update(component)
+			for node in component:
+				if node not in node_to_tree:
+					node_to_tree[node] = []
+				node_to_tree[node].append(k)
+			if len(covered_nodes) == len(G.nodes()):
+				break
+		else:
+			break
 
-	# length_matrix = np.zeros((len(G), len(G)))
+	length_matrix = np.zeros((len(G), len(G)))
 
-	# #consider hops as distance
-	# for i, node_i in enumerate(G.nodes()):
-	# 	for j, node_j in enumerate(G.nodes()):
-	# 		if i != j:
-	# 			if node_i in node_to_tree and node_j in node_to_tree and node_to_tree[node_i] == node_to_tree[node_j]:
-	# 				tree_index = node_to_tree[node_i]
-	# 				length = nx.shortest_path_length(spanning_trees[tree_index], node_i, node_j)
-	# 				length_matrix[i, j] = length
-		
-	# #MDS
-	# mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42, n_init=4, max_iter=100)
-	# pos = mds.fit_transform(length_matrix)
-	# pos_dict = {node: pos[i] for i, node in enumerate(G.nodes())}
+	#consider hops as distance
+	for i, node_i in enumerate(G.nodes()):
+		for j, node_j in enumerate(G.nodes()):
+			if i != j:
+				if nx.has_path(G, node_i, node_j):
+					common_trees = set(node_to_tree[node_i]) & set(node_to_tree[node_j])
+					if common_trees:  
+						tree_index = common_trees.pop() 
+						length = nx.shortest_path_length(spanning_trees[tree_index], source=node_i, target=node_j)
+						length_matrix[i, j] = length
+					else:
+						length_matrix[i, j] = 100
+				else:
+					length_matrix[i, j] = 100	
+	#MDS
+	mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42, n_init=4, max_iter=100)
+	pos = mds.fit_transform(length_matrix)
+	pos_dict = {node: pos[i] for i, node in enumerate(G.nodes())}
 	# #t-SNE
 	# # tsne = TSNE(n_components=2, random_state=42)
 	# # pos_array = tsne.fit_transform(length_matrix)
 	# # pos_dict = {node: pos for node, pos in zip(G.nodes(), pos_array)}
 
-	# for node, coordinates in pos_dict.items():
-	# 	G.nodes[node]['pos'] = coordinates
+	for node, coordinates in pos_dict.items():
+		G.nodes[node]['pos'] = coordinates
+
+	#######################################################################################################################################################################
+	#generate local path information
+	
+	distribution = []
+	with open('traces/ripple_val.csv', 'r') as f: 
+			csv_reader = csv.reader(f, delimiter=',')
+			for row in csv_reader:
+				# only for positive payments
+				if float(row[2]) > 0:
+					# map Ripple nodes to Lightning nodes
+					src = int(row[0]) % 6912
+					dst = int(row[1]) % 6912
+
+					if src == dst: 
+						continue
+					distribution.append((src,dst))
+	distribution_counter = Counter(distribution)
+	tmp = list(G.nodes())
+	for pair, count in distribution_counter.items():
+		if(count > 20):# frequent pairs
+			sender = tmp[pair[0]]
+			receiver = tmp[pair[1]]
+			#greedy decided by capacity
+			#G.nodes[sender]['local_path'].append((receiver,gy.greedy_pc(G,sender,receiver)))
+			#greedy decided by skewness
+			G.nodes[sender]['local_path'].append((receiver,gy.greedy_fs(G,sender,receiver)))
+			G.nodes[sender]['localed_dst'].append(receiver)
 	return G
-def get_sdpair(len, count):
+def get_random_sdpair(len, count):
 	pairlist = []
 	random.seed(12)
 	i = 0
@@ -153,12 +200,32 @@ def get_sdpair(len, count):
 			pairlist.append((src, dst))
 			i = i + 1
 	return pairlist
+
+def get_stpair(num_nodes):
+	st = []
+
+	with open('traces/ripple_val.csv', 'r') as f: 
+		csv_reader = csv.reader(f, delimiter=',')
+		for row in csv_reader:
+			# only for positive payments
+			if float(row[2]) > 0:
+				# map Ripple nodes to Lightning nodes
+				src = int(row[0]) % num_nodes
+				dst = int(row[1]) % num_nodes
+
+				if src == dst: 
+					continue
+
+				st.append((int(src), int(dst)))
+
+	return st
+
 def generate_payments(seed, nflows, G):
 	random.seed(seed)
 	print(seed)
 	payments = []
-	src_dst = get_sdpair(len(G), nflows*1000)
-    
+	#src_dst = get_random_sdpair(len(G), nflows*1000)
+	src_dst = get_stpair(len(G))
 	# sample transaction value from poisson distribution based on https://coinloan.io/blog/what-is-lightning-network-key-facts-and-figures/
 	mean = 508484000 #msat
 	quantity = np.random.poisson(mean, nflows)
@@ -185,6 +252,5 @@ def generate_payments(seed, nflows, G):
 
 	return payments
 
-def changemaxsplit(G, nodeindex, new_split):
-	G.nodes[nodeindex]['maxsplit'] = new_split
-	return 
+
+

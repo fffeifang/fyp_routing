@@ -171,3 +171,6 @@ set threshold
 1.23
 mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42, n_init=4, max_iter=100)
 (actually I don't think its decentralized because when I precompute the metrix I use shortest path to count the hop)
+
+3.1
+Currently, the greedy algrithom based on yen'k shortest path combined with path_capacity and fund skewness is uesd for initialize the whole graph. The frequenly used node pairs are decide by the ripple transaction whose times above 20. The fund skewness calculated before we have transaction,so I use the average transaction quantity to evaluate it. And after the node pair run actual transaction, the pathset will be updated locally. and the decentralized greedy algrithom is in process. I have some prooblems that for frequenly used node pairs when we need to split the payment, during pathfind should we use local pathset or run the decentralized greedy algrithom.

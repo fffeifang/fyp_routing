@@ -5,7 +5,8 @@ from random import shuffle
 from itertools import islice
 import sys
 import collections
-from greedy import greedy_fs
+from routing.greedy import greedy_fs
+from queue import Queue
 def findpaths(G, payment, k):
     local_G = G.copy()
     src = payment[0]
@@ -48,41 +49,31 @@ def findpaths(G, payment, k):
 import collections
 
 def greedy(G, src, dst):
-    print(src, dst)
-    visited = set()
-    queue = collections.deque([(src, [src])])
-    while queue:
-        (vertex, path) = queue.popleft()
-        visited.add(vertex)
-        k = 5 #coefficient
-        next_vertex = None
-        top_k_nodes = []
-        tmp_cap = -1
-        for next in set(G.neighbors(vertex)) - visited:
-            capacity = G[vertex][next]["capacity"]
-            if(capacity > 0):
-                top_k_nodes.append((next, capacity))        
-        top_k_nodes.sort(key=lambda x: x[1], reverse=True)
-        if(len(top_k_nodes) > k):
-            top_k_nodes = top_k_nodes[:k]
-        tmp = sys.maxsize
-        (x2, y2) = G.nodes[dst]["pos"]
-        for next, cap in top_k_nodes:
-            (x1, y1) = G.nodes[next]["pos"]
-            path_len = (x1 - x2)**2 + (y1 - y2)**2
-            if(path_len < tmp or (path_len == tmp and cap > tmp_cap)):
-                tmp = path_len
-                tmp_cap = cap
-                next_vertex = next 
-        if next_vertex is not None:
-            # print("the next vertex is", next_vertex)
-            if next_vertex == dst:
-                return path + [next_vertex]
-            else:
-                queue.append((next_vertex, path + [next_vertex]))
+    frontier = Queue()
+    frontier.put((src,[src],sys.maxsize))
+    maxcap = 0
+    firstpath = []
+    while not(frontier.empty()):
+        (vertex, path, mincap) = frontier.get()
+        if(vertex == dst):
+            if(mincap > maxcap):
+                maxcap = mincap
+                firstpath = path
+        for next in G.neighbors(vertex):
+            if nx.has_path(G, next, dst):
+                if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path):
+                    if(G[vertex][next]['capacity'] < mincap):
+                        mincap = G[vertex][next]['capacity']
+                    path.append(next)
+                    frontier.put((next, path, mincap))
+    return firstpath
     
-    return []
+            
 
+def dis_Manhattan(G,a,b):
+    (x1, y1) = G[a]['pos']
+    (x2, y2) = G[b]['pos'] 
+    return (x1 - x2)**2 + (y1 - y2)**2
 def split_routing(G, Pset, C, payment_size):
     transaction_fees = 0
     cur = 0
@@ -137,7 +128,7 @@ def direct_routing(G, path, payment):
         print("direct成功")
         return True, transaction_fees
 
-def update(G, src, dst):
+def update(G, src, dst): #update roughly
     if dst in G.nodes[src]['localed_dst']:
             for item in G.nodes[src]['local_path']:
                 (receiver, pathset) = item 

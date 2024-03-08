@@ -71,8 +71,8 @@ def greedy(G, src, dst):
             
 
 def dis_Manhattan(G,a,b):
-    (x1, y1) = G[a]['pos']
-    (x2, y2) = G[b]['pos'] 
+    (x1, y1) = G.nodes[a]['pos']
+    (x2, y2) = G.nodes[b]['pos'] 
     return (x1 - x2)**2 + (y1 - y2)**2
 def split_routing(G, Pset, C, payment_size):
     transaction_fees = 0

@@ -24,6 +24,9 @@ def setup():
 					node_id = nodeid,
 					max_split = 100,
 					#default max split
+					#local path of frequent nodes
+					local_path = [],
+					localed_dst = []
 				)
 
 	# load channels (very hacky way to non-parse the JSON ...)
@@ -61,9 +64,6 @@ def setup():
 					# cost = random.random()*10
 					base_fee = float(base_fee),
 					proportion_fee = float(proportion_fee),
-					#local path of frequent nodes
-					local_path = [],
-					localed_dst = []
 				)
 
 	#while  there are nodes with on channel, remove them
@@ -82,8 +82,8 @@ def setup():
 	isolated_nodes = [node for node, degree in G.degree() if degree == 0]
 	G.remove_nodes_from(isolated_nodes)
 	#relabel
-	#mapping = dict(list(zip(G.nodes(), list(range(0, len(G))))))
-	#G = nx.relabel_nodes(G, mapping, copy=False)
+	mapping = dict(list(zip(G.nodes(), list(range(0, len(G))))))
+	G = nx.relabel_nodes(G, mapping, copy=False)
 	print("number of nodes", len(G))
 	print('average channel capacity', float(sum(listC))/len(listC))
 	print('avaerage channel base fee', float(sum(base_feelist)/len(base_feelist)))
@@ -178,16 +178,22 @@ def setup():
 						continue
 					distribution.append((src,dst))
 	distribution_counter = Counter(distribution)
-	tmp = list(G.nodes())
+	
+	# with open('nodes_counts.txt', 'w') as file:
+	# 	for tmp in list(G.nodes()):
+	# 		file.write(f'{tmp}\n')
 	for pair, count in distribution_counter.items():
-		if(count > 20):# frequent pairs
-			sender = tmp[pair[0]]
-			receiver = tmp[pair[1]]
+		if(count > 30):# frequent pairs(80% pairs)
+			sender = pair[0]
+			receiver = pair[1]
 			#greedy decided by capacity
 			#G.nodes[sender]['local_path'].append((receiver,gy.greedy_pc(G,sender,receiver)))
 			#greedy decided by skewness
-			G.nodes[sender]['local_path'].append((receiver,gy.greedy_fs(G,sender,receiver)))
-			G.nodes[sender]['localed_dst'].append(receiver)
+			if nx.has_path(G, sender, receiver):
+				G.nodes[sender]['local_path'].append((receiver,gy.greedy_fs(G,sender,receiver)))
+				G.nodes[sender]['localed_dst'].append(receiver)
+				print(sender,receiver)
+	print("#################################################################")
 	return G
 def get_random_sdpair(len, count):
 	pairlist = []
@@ -247,7 +253,7 @@ def generate_payments(seed, nflows, G):
 		val = random.choice(quantity)
 
 		payments.append((src, dst, val, 1, 0))
-		print(src, dst)
+		#print(src, dst)
 
 
 	return payments

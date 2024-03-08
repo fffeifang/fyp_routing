@@ -12,7 +12,7 @@ import routing.shortest_path as sp
 def main():
     #G, trans = lightning_proc_backup.setup()
     G = lightning_proc.setup()
-    pay = lightning_proc.generate_payments(4, 10000,G)
+    pay = lightning_proc.generate_payments(4, 1000,G)
     #pay = lightning_proc_backup.generate_payments(4, 10000, trans, G)
 
 

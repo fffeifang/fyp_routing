@@ -16,6 +16,18 @@ with open('traces/ripple_val.csv', 'r') as f:
 				distribution.append((src,dst))
 distribution_counter = Counter(distribution)
 
+sorted_distribution = sorted(distribution_counter.items(), key=lambda item: item[1], reverse=True)
+
 with open('distribution_counts.txt', 'w') as file:
-    for pair, count in distribution_counter.items():
+    for pair, count in sorted_distribution:
         file.write(f'{pair}: {count} \n')
+
+sum_count = 0
+for pair, count in sorted_distribution:
+    sum_count += count
+tmp = 0
+for pair, count in sorted_distribution:
+    tmp += count 
+    if(tmp > 0.8 * sum_count):
+        print(count)
+        break

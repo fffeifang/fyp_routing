@@ -26,7 +26,9 @@ def setup():
 					#default max split
 					#local path of frequent nodes
 					local_path = [],
-					localed_dst = []
+					localed_dst = [],
+					pos = [],
+					pos_index = [],
 				)
 
 	# load channels (very hacky way to non-parse the JSON ...)
@@ -115,51 +117,31 @@ def setup():
 	G_undirected = G.to_undirected()
 	connected_components = list(nx.connected_components(G_undirected))
 	print(len(connected_components))
-	spanning_trees = []
-	node_to_tree = {} 
-	covered_nodes = set()
-	for k, component in  enumerate(connected_components):
-		if len(covered_nodes) < len(G.nodes()):
-			subgraph = G_undirected.subgraph(component).copy()
-			st = nx.minimum_spanning_tree(subgraph)
-			spanning_trees.append(st)
-			covered_nodes.update(component)
-			for node in component:
-				if node not in node_to_tree:
-					node_to_tree[node] = []
-				node_to_tree[node].append(k)
-			if len(covered_nodes) == len(G.nodes()):
-				break
-		else:
-			break
-
-	length_matrix = np.zeros((len(G), len(G)))
-
+	index = 0
 	#consider hops as distance
-	for i, node_i in enumerate(G.nodes()):
-		for j, node_j in enumerate(G.nodes()):
-			if i != j:
-				if nx.has_path(G, node_i, node_j):
-					common_trees = set(node_to_tree[node_i]) & set(node_to_tree[node_j])
-					if common_trees:  
-						tree_index = common_trees.pop() 
-						length = nx.shortest_path_length(spanning_trees[tree_index], source=node_i, target=node_j)
-						length_matrix[i, j] = length
-					else:
-						length_matrix[i, j] = 100
-				else:
-					length_matrix[i, j] = 100	
-	#MDS
-	mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42, n_init=4, max_iter=100)
-	pos = mds.fit_transform(length_matrix)
-	pos_dict = {node: pos[i] for i, node in enumerate(G.nodes())}
+	for component in connected_components:
+		subgraph = G_undirected.subgraph(component).copy()
+		st = nx.minimum_spanning_tree(subgraph)
+		length_matrix = np.zeros((len(subgraph), len(subgraph)))
+		for i, node_i in enumerate(subgraph.nodes()):
+			for j, node_j in enumerate(subgraph.nodes()):
+				if i != j:
+					length = nx.shortest_path_length(st, source=node_i, target=node_j)
+					length_matrix[i, j] = length
+		mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42, n_init=4, max_iter=100)
+		tmp_pos = mds.fit_transform(length_matrix)
+		pos_dict = {node: tmp_pos[i] for i, node in enumerate(subgraph.nodes())}
+		for node, coordinates in pos_dict.items():
+			G.nodes[node]['pos'].append(coordinates)
+			G.nodes[node]['pos_index'].append(index)
+		index += 1
+	print(G.nodes())
+
 	# #t-SNE
 	# # tsne = TSNE(n_components=2, random_state=42)
 	# # pos_array = tsne.fit_transform(length_matrix)
 	# # pos_dict = {node: pos for node, pos in zip(G.nodes(), pos_array)}
 
-	for node, coordinates in pos_dict.items():
-		G.nodes[node]['pos'] = coordinates
 
 	#######################################################################################################################################################################
 	#generate local path information

@@ -176,8 +176,10 @@ def routing(G, cur_payments):
                 (receiver, pathset) = item 
                 if(receiver == dst):
                     path, path_sk = pathset[0]
+                print("local path")
         else:
             path = greedy(G, src, dst)
+            print("greedy path")
         total_probing_messages += len(path)-1
         print("============================")
         print(payment_size)
@@ -185,6 +187,7 @@ def routing(G, cur_payments):
         flag_split = False
         success = False
         if path != []:
+            print(path)
             for i in range(len(path)-1): 
                 path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"]) 
                 

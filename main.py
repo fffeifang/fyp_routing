@@ -17,7 +17,7 @@ def main():
 
 
     #pay = [[1,2,40,1,0]]
-    #rhgf.routing(G, pay)
+    rhgf.routing(G, pay)
 
 if __name__ == "__main__":
  	main()

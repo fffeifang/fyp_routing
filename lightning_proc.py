@@ -174,7 +174,7 @@ def setup():
 			if nx.has_path(G, sender, receiver):
 				G.nodes[sender]['local_path'].append((receiver,gy.greedy_fs(G,sender,receiver)))
 				G.nodes[sender]['localed_dst'].append(receiver)
-				print(sender,receiver)
+				#print(sender,receiver)
 	print("#################################################################")
 	return G
 def get_random_sdpair(len, count):

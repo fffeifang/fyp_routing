@@ -71,3 +71,6 @@ def main():
     tmp = list(G.nodes)
     path = nx.shortest_path(G,tmp[0] , tmp[1])
     print (tmp)
+
+
+

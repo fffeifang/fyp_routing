@@ -5,7 +5,7 @@ from random import shuffle
 from itertools import islice
 import sys
 import collections
-from routing.greedy import greedy_fs
+#from routing.greedy import greedy_fs
 from queue import Queue
 def findpaths(G, payment, k):
     local_G = G.copy()
@@ -141,17 +141,24 @@ def direct_routing(G, path, payment):
     else: 
         print("direct成功")
         return True, transaction_fees
+    
+def weightchoose(pathset):
+    samples = np.random.normal(0, 1, 100000)
 
-def update(G, src, dst): #update roughly
-    if dst in G.nodes[src]['localed_dst']:
-            for item in G.nodes[src]['local_path']:
-                (receiver, pathset) = item 
-                if(receiver == dst):
-                    G.nodes[src]['local_path'].remove(item)
-                    G.nodes[dst]['local_path'].append((dst,greedy_fs(G,src,dst)))
-                    return
-    else:
-        return
+    samples_positive = samples[samples > 0]
+
+    samples_scaled = (samples_positive / np.max(samples_positive)) * len(pathset)
+    samples_transformed = np.round(samples_scaled) 
+
+    weights_discrete = np.zeros(len(pathset))
+    for value in range(len(pathset)):
+        weights_discrete[value] = np.sum(samples_transformed == value)
+
+    weights_normalized = weights_discrete / np.sum(weights_discrete)
+
+    random.choice(pathset, weights_normalized)
+
+
 def routing(G, cur_payments):
     throughput_pay = 0
     transaction_fees = 0
@@ -175,6 +182,7 @@ def routing(G, cur_payments):
             for item in G.nodes[src]['local_path']:
                 (receiver, pathset) = item 
                 if(receiver == dst):
+                    weightchoose(pathset)
                     path, path_sk = pathset[0]
                 print("local path")
         else:
@@ -221,7 +229,7 @@ def routing(G, cur_payments):
                 num_direct += 1
                 throughput_pay += payment_size
                 throughput_total += payment_size + transaction_fees
-                update(G, src, dst)    
+                #update(G, src, dst)    
 
 
     print(num_delivered)

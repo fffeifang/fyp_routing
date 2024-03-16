@@ -9,7 +9,7 @@ from collections import Counter
 import routing.greedy as gy
 # returns network topology and transactions for Lightning
 
-def setup():
+def setup(flag):
 	# load nodes (very hacky way to non-parse the JSON ...)
 	nodes = []
 	G = nx.DiGraph()
@@ -168,11 +168,14 @@ def setup():
 		if(count > 30):# frequent pairs(80% pairs)
 			sender = pair[0]
 			receiver = pair[1]
-			#greedy decided by capacity
+			
 			#G.nodes[sender]['local_path'].append((receiver,gy.greedy_pc(G,sender,receiver)))
-			#greedy decided by skewness
+			
 			if nx.has_path(G, sender, receiver):
-				G.nodes[sender]['local_path'].append((receiver,gy.greedy_fs(G,sender,receiver)))
+				if(flag == 0):#greedy decided by skewness
+					G.nodes[sender]['local_path'].append((receiver,gy.greedy_fs(G,sender,receiver)))
+				else:#greedy decided by capacity
+					G.nodes[sender]['local_path'].append((receiver,gy.greedy_pc(G,sender,receiver)))
 				G.nodes[sender]['localed_dst'].append(receiver)
 				#print(sender,receiver)
 	print("#################################################################")

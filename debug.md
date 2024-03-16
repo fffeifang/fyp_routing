@@ -180,3 +180,6 @@ I change the defination of frequent node pairs, and currently it contains about 
 
 I wanna check if the whole logic is right.
 the transactions are devided into the frequent node pair and others. In local the pathset of frequent node pair is calculated by k shorteset path with the parameter of path capacity or path skewness to sort paths. when we run the transactions,  others use greedy to find path. when it comes to a breakpoint, it further split by recursively halved, proportion or balanced.the frequent node pairs first use local pathset, when it comes to  a breakpoint ,should it try to split with the other local path like from the sender or it try to use greedy or other local path in breakpoint?
+
+3.15
+I've almost finished writing the scripts, the greedy function still have some problem maybe caused by the coordinate. According to the ripple dataset, 8% node pairs runs 80% transaction, so the local pathset can be used up quickly. And if we update after using the pair, would it be centralized and it seems can't speed up the routing? and if we make it heristic as last time you said, how to assign the posssibiliy.

@@ -186,7 +186,7 @@ def routing(G, cur_payments):
                 for i in range(len(path)-1): 
                     path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"]) 
             else:
-                path_cap = 0.1
+                path_cap = 0.1 # must split
         total_probing_messages += len(path)-1
         print("============================")
         print(payment_size)

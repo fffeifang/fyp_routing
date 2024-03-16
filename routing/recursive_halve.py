@@ -142,7 +142,7 @@ def direct_routing(G, path, payment):
         print("direct成功")
         return True, transaction_fees
     
-def weightchoose(pathset):
+def weightchoosenormal(pathset):
     samples = np.random.normal(0, 1, 100000)
 
     samples_positive = samples[samples > 0]
@@ -156,7 +156,9 @@ def weightchoose(pathset):
 
     weights_normalized = weights_discrete / np.sum(weights_discrete)
 
-    random.choice(pathset, weights_normalized)
+    path = random.choice(pathset, weights_normalized)
+    
+    return path
 
 
 def routing(G, cur_payments):
@@ -182,8 +184,7 @@ def routing(G, cur_payments):
             for item in G.nodes[src]['local_path']:
                 (receiver, pathset) = item 
                 if(receiver == dst):
-                    weightchoose(pathset)
-                    path, path_sk = pathset[0]
+                    path = weightchoose(pathset)
                 print("local path")
         else:
             path = greedy(G, src, dst)

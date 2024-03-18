@@ -8,7 +8,6 @@ import sys
 import collections
 #from routing.greedy import greedy_fs
 from queue import Queue
-
 def findpaths(G, payment, k):
     local_G = G.copy()
     src = payment[0]
@@ -18,42 +17,74 @@ def findpaths(G, payment, k):
     cap_set = []
     solved_size  = 0
     q = queue.Queue()
-    q.put(payment)
+    q.put((src, dst, payment_size, -1))#-1 -> last, as the node before split 
     loop = 0
     while (not q.empty()) or solved_size < payment_size:
-        loop+=1
-        if(loop > 50): #limit on loop
+        loop += 1
+        if(loop > 50): # limit on loop
             return None, None
         cur_payment = q.get()
         cur_src = cur_payment[0]
         cur_dst = cur_payment[1]
         cur_paymentsize = cur_payment[2]
-        if(cur_paymentsize < 1): #limit on minimum paymentsize
-            return None, None 
-        success, bp, cur_path = probpath(local_G, cur_src, cur_dst, cur_paymentsize)
-        if success:
-            update_graph_capacity(local_G, cur_path, cur_paymentsize)
-            path_set.append(cur_path)
-            cap_set.append(cur_paymentsize) 
+        cur_last = cur_paymentsize[3]
+        success1, bp, cur_path = probpath(local_G, cur_src, cur_dst, cur_paymentsize)
+        if success1:
+            if(cur_last != -1):
+                cur_path = [cur_last] + cur_path
+            update_graph_capacity(local_G, cur_path, cur_paymentsize) 
             solved_size += cur_paymentsize
         else:
-            if(bp != cur_src):
-                path_set.append(cur_path)
-                cap_set.append(cur_paymentsize)
-            next_payment = (bp, dst, cur_paymentsize/2)
-            q.put(next_payment)
-            q.put(next_payment)
-    if(solved_size >= payment_size):
-        return path_set, cap_set
+            success2, nextlist = find_next_nodes(local_G, bp, dst, cur_paymentsize)
+            if success2:
+                if(bp != cur_src):
+                    path_set.append(cur_path)
+                    cap_set.append(cur_paymentsize)
+                for i in range(len(nextlist)):
+                    (next_node, next_payment) = nextlist[i]
+                    q.put(next_node, dst, next_payment, bp)
+            else:#fail or roll back?
+                return None, None
+    return path_set, cap_set 
 
 
+def find_next_nodes(G, bp, dst, paymentsize):
+    tmp_nextlist = []
+    nextlist = []
+    sum_cap = 0
+    for next in set(G.neighbors(bp)):
+        if nx.has_path(G, next, dst):
+            if (dis_Manhattan(next, dst) < dis_Manhattan(bp, dst)):
+                tmp_nextlist.append((next, G[bp][next]["capacity"]))
+                sum_cap += G[bp][next]["capacity"]
+    if(paymentsize > sum_cap):
+        return False, []
+    else:
+        for item in tmp_nextlist:
+            (next, next_cap) = item
+            nextlist.append((next, next_cap/sum_cap*paymentsize))
+    return True, nextlist
          
 def update_graph_capacity(G, path, payment):
     for i in range(len(path) - 1):
         G[path[i]][path[i+1]]["capacity"] -= payment 
         G[path[i+1]][path[i]]["capacity"] += payment 
 
-
+def find_next_nodes(G, last, bp, dst, k):
+    tmp = 0
+    nextlist_all = []
+    nextlist = []
+    for next in set(G.neighbors(bp)) - {last}:
+        capacity = G[bp][next]["capacity"]
+        if nx.has_path(G, next, dst) and capacity > 0:
+            tmp += 0.8 * G[bp][next]["capacity"]
+            nextlist_all.append((next, capacity))        
+    nextlist_all.sort(key=lambda x: x[1], reverse=True)
+    if(len(nextlist_all) > k):
+        nextlist_all = nextlist_all[:k]
+    for next, _ in nextlist_all:
+        nextlist.append(next)
+    return nextlist, tmp
 
 def probpath(G, src, dst, payment_size):
     if dst in G.nodes[src]['localed_dst']:
@@ -103,21 +134,6 @@ def greedy(G, src, dst):
                         frontier.put((next, path, mincap))
     return firstpath
     
-            
-
-def dis_Manhattan(G,a,b):
-    a_pos_index_set = set(G.nodes[a]['pos_index'])
-    b_pos_index_set = set(G.nodes[b]['pos_index'])
-    min_dis = sys.maxsize
-    for pos_index in a_pos_index_set.intersection(b_pos_index_set):
-        tmp = G.nodes[a]['pos_index'].index(pos_index) 
-        (x1, y1) = G.nodes[a]['pos'][tmp]
-        (x2, y2) = G.nodes[b]['pos'][tmp]
-        dis = abs(x1 - x2) + abs(y1 - y2)
-        if(dis < min_dis):
-            min_dis = dis 
-    return min_dis
-
 def split_routing(G, Pset, C, payment_size):
     transaction_fees = 0
     breakpoint_p = -1
@@ -181,8 +197,23 @@ def direct_routing(G, path, payment):
 
     else: 
         print("direct成功")
-        return True, transaction_fees
-    
+        return True, transaction_fees            
+
+def dis_Manhattan(G,a,b):
+    a_pos_index_set = set(G.nodes[a]['pos_index'])
+    b_pos_index_set = set(G.nodes[b]['pos_index'])
+    min_dis = sys.maxsize
+    for pos_index in a_pos_index_set.intersection(b_pos_index_set):
+        tmp = G.nodes[a]['pos_index'].index(pos_index) 
+        (x1, y1) = G.nodes[a]['pos'][tmp]
+        (x2, y2) = G.nodes[b]['pos'][tmp]
+        dis = abs(x1 - x2) + abs(y1 - y2)
+        if(dis < min_dis):
+            min_dis = dis 
+    return min_dis
+
+
+
 def weightchoosenormal(pathset):
     samples = np.random.normal(0, 1, 100000)
 

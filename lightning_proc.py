@@ -9,7 +9,7 @@ from collections import Counter
 import routing.greedy as gy
 # returns network topology and transactions for Lightning
 
-def setup(flag):
+def setup():
 	# load nodes (very hacky way to non-parse the JSON ...)
 	nodes = []
 	G = nx.DiGraph()
@@ -103,9 +103,10 @@ def setup(flag):
 	print('medium channel base fee', stats.scoreatpercentile(base_feelist_sorted, 50))
 	print('max channel base fee', stats.scoreatpercentile(base_feelist_sorted, 99))
 	print('medium channel proportion', stats.scoreatpercentile(proportion_feelist_sorted, 50))
-	#add property of coordinate
-	#######################################################################################################################################################################
 
+
+	return G
+def initcoordinate(G):#add property of coordinate
 	#api layout
 	#pos = nx.kamada_kawai_layout(G)
 	#pos = nx.circular_layout(G)
@@ -135,16 +136,14 @@ def setup(flag):
 			G.nodes[node]['pos'].append(coordinates)
 			G.nodes[node]['pos_index'].append(index)
 		index += 1
-	print(G.nodes())
+	
 
 	# #t-SNE
 	# # tsne = TSNE(n_components=2, random_state=42)
 	# # pos_array = tsne.fit_transform(length_matrix)
 	# # pos_dict = {node: pos for node, pos in zip(G.nodes(), pos_array)}
-
-
-	#######################################################################################################################################################################
-	#generate local path information
+	return
+def initlocalpath(G, flag):#generate local path information
 	
 	distribution = []
 	with open('traces/ripple_val.csv', 'r') as f: 
@@ -178,8 +177,7 @@ def setup(flag):
 					G.nodes[sender]['local_path'].append((receiver,gy.greedy_pc(G,sender,receiver)))
 				G.nodes[sender]['localed_dst'].append(receiver)
 				#print(sender,receiver)
-	print("#################################################################")
-	return G
+	return
 def get_random_sdpair(len, count):
 	pairlist = []
 	random.seed(12)

@@ -204,6 +204,25 @@ def direct_routing(G, path, payment):
   
     return True, transaction_fees
 
+def weightchoosenormal(pathset):
+    samples = np.random.normal(0, 1, 100000)
+
+    samples_positive = samples[samples > 0]
+
+    samples_scaled = (samples_positive / np.max(samples_positive)) * len(pathset)
+    samples_transformed = np.round(samples_scaled) 
+
+    weights_discrete = np.zeros(len(pathset))
+    for value in range(len(pathset)):
+        weights_discrete[value] = np.sum(samples_transformed == value)
+
+    weights_normalized = weights_discrete / np.sum(weights_discrete)
+
+    (path, pathsk) = random.choices(pathset, weights_normalized, k=1)[0]
+    
+    return path
+
+
 def routing(G, cur_payments):
     throughput_pay = 0
     transaction_fees = 0
@@ -223,30 +242,57 @@ def routing(G, cur_payments):
         #path = nx.shortest_path(G, src, dst, weight=weighted_capacity)
         if not nx.has_path(G, src, dst):
             continue
-        path, path_cap = greedy(G, src, dst)
+        if dst in G.nodes[src]['localed_dst']:
+            for item in G.nodes[src]['local_path']:
+                (receiver, pathset) = item 
+                if(receiver == dst):
+                    path = weightchoosenormal(pathset)
+                print("local path")
+        else:
+            path = greedy(G, src, dst)
+            print("greedy path")
         total_probing_messages += len(path)-1
         print("============================")
         print(payment_size)
-        if payment_size/path_cap > 0.8:
-            print("split prob")
-            Pset, C = findpaths(G, payment_copy)
-            if not (Pset is None or C is None):
-                success_split, transaction_fees = split_routing(G, Pset, C)
-                if success_split:
-                    print("split!") 
-                    num_delivered += 1
-                    num_splited += 1
-                    throughput_pay += payment_size
-                    throughput_total += payment_size + transaction_fees 
-            
+        path_cap = sys.maxsize
+        flag_split = False
+        success = False
+        if path != []:
+            print(path)
+            for i in range(len(path)-1): 
+                path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"]) 
+                
+                if payment_size/path_cap > 0.8:
+                    print("split prob")
+                    flag_split = True
+                    Pset, C = findpaths(G, payment_copy, 10)
+                    if not (Pset is None or C is None):
+                        success = True
+                    break
         else:
-            success_direct, transaction_fees = direct_routing(G, path, payment_copy)
-            if success_direct:
+            print("split prob")
+            flag_split = True
+            Pset, C = findpaths(G, payment_copy, 10)
+            if not (Pset is None or C is None):
+                success = True
+
+        if success and flag_split:
+            split_success, transaction_fees = split_routing(G, Pset, C, payment_size)
+            if split_success is True:
+                print("split!") 
+                num_delivered += 1
+                num_splited += 1
+                throughput_pay += payment_size
+                throughput_total += payment_size + transaction_fees  
+        elif not (flag_split):
+            direct_success, transaction_fees = direct_routing(G, path, payment_copy)
+            if direct_success is True:
                 print("direct!") 
                 num_delivered += 1
                 num_direct += 1
                 throughput_pay += payment_size
-                throughput_total += payment_size + transaction_fees    
+                throughput_total += payment_size + transaction_fees
+                #update(G, src, dst)    
 
 
     print(num_delivered)
@@ -258,4 +304,3 @@ def routing(G, cur_payments):
     print(overallpayment)
     print(throughput_total)
     return num_delivered, throughput_pay, throughput_total, success_ratio, success_volume
- 

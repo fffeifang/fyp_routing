@@ -103,10 +103,8 @@ def setup():
 	print('medium channel base fee', stats.scoreatpercentile(base_feelist_sorted, 50))
 	print('max channel base fee', stats.scoreatpercentile(base_feelist_sorted, 99))
 	print('medium channel proportion', stats.scoreatpercentile(proportion_feelist_sorted, 50))
-
-
 	return G
-def initcoordinate(G):#add property of coordinate
+def initcoordinate_spanningtree(G):#add property of coordinate
 	#api layout
 	#pos = nx.kamada_kawai_layout(G)
 	#pos = nx.circular_layout(G)
@@ -142,7 +140,29 @@ def initcoordinate(G):#add property of coordinate
 	# # tsne = TSNE(n_components=2, random_state=42)
 	# # pos_array = tsne.fit_transform(length_matrix)
 	# # pos_dict = {node: pos for node, pos in zip(G.nodes(), pos_array)}
-	return
+
+def initcoordinate(G):#add property of coordinate
+	G_undirected = G.to_undirected()
+	connected_components = list(nx.connected_components(G_undirected))
+	print(len(connected_components))
+	index = 0
+	#consider hops as distance
+	for component in connected_components:
+		subgraph = G_undirected.subgraph(component).copy()
+		length_matrix = np.zeros((len(subgraph), len(subgraph)))
+		for i, node_i in enumerate(subgraph.nodes()):
+			for j, node_j in enumerate(subgraph.nodes()):
+				if i != j:
+					length = nx.shortest_path_length(subgraph, source=node_i, target=node_j)
+					length_matrix[i, j] = length
+		mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42, n_init=4, max_iter=100)
+		tmp_pos = mds.fit_transform(length_matrix)
+		pos_dict = {node: tmp_pos[i] for i, node in enumerate(subgraph.nodes())}
+		for node, coordinates in pos_dict.items():
+			G.nodes[node]['pos'].append(coordinates)
+			G.nodes[node]['pos_index'].append(index)
+		index += 1
+
 def initlocalpath(G, flag):#generate local path information
 	
 	distribution = []
@@ -177,7 +197,7 @@ def initlocalpath(G, flag):#generate local path information
 					G.nodes[sender]['local_path'].append((receiver,gy.greedy_pc(G,sender,receiver)))
 				G.nodes[sender]['localed_dst'].append(receiver)
 				#print(sender,receiver)
-	return
+
 def get_random_sdpair(len, count):
 	pairlist = []
 	random.seed(12)

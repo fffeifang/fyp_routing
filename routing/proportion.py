@@ -57,7 +57,7 @@ def find_next_nodes(G, bp, dst, paymentsize):
             if (dis_Manhattan(next, dst) < dis_Manhattan(bp, dst)):
                 tmp_nextlist.append((next, G[bp][next]["capacity"]))
                 sum_cap += G[bp][next]["capacity"]
-    if(paymentsize > sum_cap):
+    if(paymentsize > 0.9 * sum_cap):
         return False, []
     else:
         for item in tmp_nextlist:
@@ -70,21 +70,6 @@ def update_graph_capacity(G, path, payment):
         G[path[i]][path[i+1]]["capacity"] -= payment 
         G[path[i+1]][path[i]]["capacity"] += payment 
 
-def find_next_nodes(G, last, bp, dst, k):
-    tmp = 0
-    nextlist_all = []
-    nextlist = []
-    for next in set(G.neighbors(bp)) - {last}:
-        capacity = G[bp][next]["capacity"]
-        if nx.has_path(G, next, dst) and capacity > 0:
-            tmp += 0.8 * G[bp][next]["capacity"]
-            nextlist_all.append((next, capacity))        
-    nextlist_all.sort(key=lambda x: x[1], reverse=True)
-    if(len(nextlist_all) > k):
-        nextlist_all = nextlist_all[:k]
-    for next, _ in nextlist_all:
-        nextlist.append(next)
-    return nextlist, tmp
 
 def probpath(G, src, dst, payment_size):
     if dst in G.nodes[src]['localed_dst']:

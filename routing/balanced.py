@@ -36,7 +36,7 @@ def findpaths(G, payment, k):
             update_graph_capacity(local_G, cur_path, cur_paymentsize) 
             solved_size += cur_paymentsize
         else:
-            success2, nextlist = find_next_nodes(local_G, bp, dst, cur_paymentsize)
+            success2, nextlist = find_next_nodes_balanced(local_G, bp, dst, cur_paymentsize)
             if success2:
                 if(bp != cur_src):
                     path_set.append(cur_path)
@@ -81,7 +81,8 @@ def find_next_nodes_balanced(G, bp, dst, paymentsize):
         for item in tmp_nextlist:
             (next, next_cap, next_psi) = item
             mapped_psi = (next_psi - minsk) / (maxsk - minsk) if maxsk != minsk else 1
-            weighted_next = mapped_psi * paymentsize / len(tmp_nextlist)  # intialize with average
+            weighted_cap = next_cap/sum_cap
+            weighted_next = (mapped_psi * weighted_cap )* paymentsize / len(tmp_nextlist)  # intialize with average
             adjusted_payment = min(weighted_next, 0.9 * next_cap)  
             nextlist.append((next, adjusted_payment))
 
@@ -118,22 +119,6 @@ def update_graph_capacity(G, path, payment):
     for i in range(len(path) - 1):
         G[path[i]][path[i+1]]["capacity"] -= payment 
         G[path[i+1]][path[i]]["capacity"] += payment 
-
-def find_next_nodes(G, last, bp, dst, k):
-    tmp = 0
-    nextlist_all = []
-    nextlist = []
-    for next in set(G.neighbors(bp)) - {last}:
-        capacity = G[bp][next]["capacity"]
-        if nx.has_path(G, next, dst) and capacity > 0:
-            tmp += 0.8 * G[bp][next]["capacity"]
-            nextlist_all.append((next, capacity))        
-    nextlist_all.sort(key=lambda x: x[1], reverse=True)
-    if(len(nextlist_all) > k):
-        nextlist_all = nextlist_all[:k]
-    for next, _ in nextlist_all:
-        nextlist.append(next)
-    return nextlist, tmp
 
 def probpath(G, src, dst, payment_size):
     if dst in G.nodes[src]['localed_dst']:

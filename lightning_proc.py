@@ -163,8 +163,40 @@ def initcoordinate(G):#add property of coordinate
 			G.nodes[node]['pos_index'].append(index)
 		index += 1
 
-def initlocalpath(G, flag):#generate local path information
-	
+def initlocalpath(G, flag):#generate local path information	and return distribution for generating transaction 
+	ripple_node = []
+	ripple_nodecnt = []
+
+	with open('trances/ripple.graph_CREDIT_LINKS', 'r') as f:
+		for line in f:
+			source = int(line.split()[0])
+			destination = int(line.split()[1])
+			if source in ripple_node:
+				index = ripple_node.index(source)
+				_, cnt = ripple_nodecnt[index]
+				ripple_nodecnt[index] = (source, cnt + 1)
+			else:
+				ripple_node.append(source)
+				ripple_nodecnt.append((source, 1))
+			
+			if destination in ripple_node:
+				index = ripple_node.index(destination)
+				_, cnt = ripple_nodecnt[index]
+				ripple_nodecnt[index] = (destination, cnt + 1)
+			else:
+				ripple_node.append(destination)
+				ripple_nodecnt.append((destination, 1))
+	ripple_nodecnt_sorted = sorted(ripple_nodecnt, key=lambda x: x[1], reverse=True)
+	ripple_node_sorted = []
+	for node, _ in ripple_nodecnt_sorted:
+		ripple_node_sorted.append(node)
+	lightning_nodecnt = []	
+	for node, degree in G.degree():
+		lightning_nodecnt.append((node,degree))
+	lightning_nodecnt_sorted = sorted(lightning_nodecnt, key=lambda x:x[1], reverse=True)
+	lightning_node_sorted = []
+	for node, _ in lightning_nodecnt_sorted:
+		lightning_node_sorted.append(node)
 	distribution = []
 	with open('traces/ripple_val.csv', 'r') as f: 
 			csv_reader = csv.reader(f, delimiter=',')
@@ -172,12 +204,15 @@ def initlocalpath(G, flag):#generate local path information
 				# only for positive payments
 				if float(row[2]) > 0:
 					# map Ripple nodes to Lightning nodes
-					src = int(row[0]) % 6912
-					dst = int(row[1]) % 6912
-
-					if src == dst: 
+					src_ripple = int(row[0])
+					src_index = ripple_node_sorted.index(src_ripple) % 6912
+					src_lightning = lightning_node_sorted[src_index]
+					dst_ripple = int(row[1]) % 6912
+					dst_index = ripple_node_sorted.index(dst_ripple) % 6912
+					dst_lightning = lightning_node_sorted[dst_index]
+					if src_lightning == dst_lightning: 
 						continue
-					distribution.append((src,dst))
+					distribution.append((src_lightning,dst_lightning))
 	distribution_counter = Counter(distribution)
 	
 	# with open('nodes_counts.txt', 'w') as file:
@@ -195,9 +230,8 @@ def initlocalpath(G, flag):#generate local path information
 					G.nodes[sender]['local_path'].append((receiver,gy.greedy_fs(G,sender,receiver)))
 				else:#greedy decided by capacity
 					G.nodes[sender]['local_path'].append((receiver,gy.greedy_pc(G,sender,receiver)))
-				G.nodes[sender]['localed_dst'].append(receiver)
-				#print(sender,receiver)
-
+				G.nodes[sender]['localed_dst'].append(receiver)	
+	return distribution
 def get_random_sdpair(len, count):
 	pairlist = []
 	random.seed(12)
@@ -210,7 +244,7 @@ def get_random_sdpair(len, count):
 			i = i + 1
 	return pairlist
 
-def get_stpair(num_nodes):
+def get_stpair(num_nodes, distribution):
 	st = []
 
 	with open('traces/ripple_val.csv', 'r') as f: 
@@ -229,12 +263,12 @@ def get_stpair(num_nodes):
 
 	return st
 
-def generate_payments(seed, nflows, G):
+def generate_payments(seed, nflows, G, distribution):
 	random.seed(seed)
 	print(seed)
 	payments = []
 	#src_dst = get_random_sdpair(len(G), nflows*1000)
-	src_dst = get_stpair(len(G))
+	src_dst = distribution
 	# sample transaction value from poisson distribution based on https://coinloan.io/blog/what-is-lightning-network-key-facts-and-figures/
 	mean = 508484000 #msat
 	quantity = np.random.poisson(mean, nflows)

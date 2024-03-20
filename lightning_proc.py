@@ -188,7 +188,8 @@ def read_graph(G, file_path = './node_coordinates.txt'):
 				G.nodes[node_name]['pos'].append(list_pos[idx])
 				G.nodes[node_name]['pos_index'].append(list_pos_index[idx])
 			line = target.readline()
-
+	
+	return G
 
 
 

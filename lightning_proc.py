@@ -244,25 +244,6 @@ def get_random_sdpair(len, count):
 			i = i + 1
 	return pairlist
 
-def get_stpair(num_nodes, distribution):
-	st = []
-
-	with open('traces/ripple_val.csv', 'r') as f: 
-		csv_reader = csv.reader(f, delimiter=',')
-		for row in csv_reader:
-			# only for positive payments
-			if float(row[2]) > 0:
-				# map Ripple nodes to Lightning nodes
-				src = int(row[0]) % num_nodes
-				dst = int(row[1]) % num_nodes
-
-				if src == dst: 
-					continue
-
-				st.append((int(src), int(dst)))
-
-	return st
-
 def generate_payments(seed, nflows, G, distribution):
 	random.seed(seed)
 	print(seed)

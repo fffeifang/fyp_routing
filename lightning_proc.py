@@ -148,6 +148,7 @@ def initcoordinate(G):#add property of coordinate
 	index = 0
 	#consider hops as distance
 	for component in connected_components:
+		print('here')
 		subgraph = G_undirected.subgraph(component).copy()
 		length_matrix = np.zeros((len(subgraph), len(subgraph)))
 		for i, node_i in enumerate(subgraph.nodes()):
@@ -162,33 +163,29 @@ def initcoordinate(G):#add property of coordinate
 			G.nodes[node]['pos'].append(coordinates)
 			G.nodes[node]['pos_index'].append(index)
 
-		with open('node_coordinates.txt', 'w+') as target:
+		with open('node_coordinates.txt', 'a+') as target:
 			for i, node in enumerate(subgraph.nodes()):
-				target.write(str(node)+":\n ")
-				target.write(G.nodes[node]['pos'])
-				target.write("\n ")
-				target.write(G.nodes[node]['pos_index'])
-				target.write("\n")
-
+				target.write(str(node)+"\n")
+				len_pos = len(G.nodes[node]['pos'])
+				for idx in range(len_pos): 
+					target.write(' ' + str(G.nodes[node]['pos'][idx]) + ' ' + str(G.nodes[node]['pos_index'][idx]) + "\n")
+			target.close()
 		index += 1
 
 def read_graph(G, file_path = './node_coordinates.txt'):
 
-	with open(file_path, 'r+') as target:
+	with open(file_path, 'r') as target:
 		line = target.readline()
-		while line is not None:
-			node_name = int(line)
+		while line:
+			print(line)
+			if line[0] != ' ':
+				node_name = int(line)
+			else:
+				data = line.replace('\n', '').split(' ')
+				G.nodes[node_name]['pos'].append(data[0])
+				G.nodes[node_name]['pos_index'].append(data[1])
 			line = target.readline()
-			list_pos = line.replace('\n').split(' ')
-			line = target.readline()
-			list_pos_index = line.replace('\n').split(' ')
-
-			pos_len = len(list_pos)
-			for idx in range(pos_len):
-				G.nodes[node_name]['pos'].append(list_pos[idx])
-				G.nodes[node_name]['pos_index'].append(list_pos_index[idx])
-			line = target.readline()
-	
+		target.close()
 	return G
 
 

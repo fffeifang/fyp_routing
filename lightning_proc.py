@@ -178,7 +178,7 @@ def initcoordinate(G):#add property of coordinate
 						target.write(str(G.nodes[node]['pos'][idx]) + ' ')
 					target.write('\n')
 
-					target.write(str(G.nodes[node]['pos_index'][idx]) + '\n')
+					target.write(str(G.nodes[node]['pos_index']) + '\n')
 			target.close()
 
 def read_graph(G, file_path = './node_coordinates_test.txt'):

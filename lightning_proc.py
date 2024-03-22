@@ -161,7 +161,62 @@ def initcoordinate(G):#add property of coordinate
 		for node, coordinates in pos_dict.items():
 			G.nodes[node]['pos'].append(coordinates)
 			G.nodes[node]['pos_index'].append(index)
+			
 		index += 1
+
+	with open('node_coordinates_test.txt', 'a+') as target:
+		for node in range(len(G.nodes)):
+			target.write(str(node)+"\n")
+			len_pos = len(G.nodes[node]['pos'])
+
+			if len_pos == 0:
+				target.write('\n')
+			else:
+				for idx in range(len_pos): 
+					target.write(str(G.nodes[node]['pos'][idx]) + ' ')
+				target.write('\n')
+
+				len_pos_index = len(G.nodes[node]['pos_index'])
+				for idx in range(len_pos_index): 
+					target.write(str(G.nodes[node]['pos_index'][idx]) + ' ')
+				target.write('\n')
+
+		target.close()
+
+def read_coordinate(G, file_path = './node_coordinates_test.txt'):
+	with open(file_path, 'r') as target:
+		line = target.readline()
+		count = 0
+		node_name = 0
+		while line:
+			# print(line)
+			# print(count)
+			if count == ' ':
+				node_name = int(line)
+			elif count == 1:
+				data = line.replace('[','').replace(']','').split(' ')
+				coordinates = []
+				flag = 0
+
+				for i in range(len(data)):
+					if len(data[i]) > 1:
+						coordinates.append(float(data[i]))
+						flag += 1
+					if flag == 2:
+						break
+
+				G.nodes[node_name]['pos_index'].append(coordinates)
+				# print(coordinates)
+			else:
+				# print(int(line))
+				G.nodes[node_name]['pos'].append(int(line))
+
+			line = target.readline()
+
+			count += 1
+			count %= 3
+		target.close()
+	return G
 
 def initlocalpath(G, flag):#generate local path information	and return distribution for generating transaction 
 	ripple_node = []

@@ -194,25 +194,24 @@ def read_graph(G, file_path = './node_coordinates_test.txt'):
 		while line:
 			# print(line)
 			# print(count)
-			if count == ' ':
+			if count == 0:
 				node_name = int(line)
 			elif count == 1:
 				data = line.replace('[','').replace(']','').split(' ')
-				coordinates = []
+
 				flag = 0
 
 				for i in range(len(data)):
 					if len(data[i]) > 1:
-						coordinates.append(float(data[i]))
+						G.nodes[node_name]['pos'].append(float(data[i]))
 						flag += 1
 					if flag == 2:
 						break
-
-				G.nodes[node_name]['pos_index'].append(coordinates)
+				
 				# print(coordinates)
 			else:
 				# print(int(line))
-				G.nodes[node_name]['pos'].append(int(line))
+				G.nodes[node_name]['pos_index'].append(int(line))
 
 			line = target.readline()
 

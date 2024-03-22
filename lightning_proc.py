@@ -160,8 +160,8 @@ def initcoordinate(G):#add property of coordinate
 		tmp_pos = mds.fit_transform(length_matrix)
 		pos_dict = {node: tmp_pos[i] for i, node in enumerate(subgraph.nodes())}
 		for node, coordinates in pos_dict.items():
-			G.nodes[node]['pos'].append(coordinates)
-			G.nodes[node]['pos_index'].append(index)
+			G.nodes[node]['pos'] = coordinates
+			G.nodes[node]['pos_index'] = index
 
 		
 		index += 1
@@ -178,11 +178,7 @@ def initcoordinate(G):#add property of coordinate
 						target.write(str(G.nodes[node]['pos'][idx]) + ' ')
 					target.write('\n')
 
-					len_pos_index = len(G.nodes[node]['pos_index'])
-					for idx in range(len_pos_index): 
-						target.write(str(G.nodes[node]['pos_index'][idx]) + ' ')
-					target.write('\n')
-
+					target.write(str(G.nodes[node]['pos_index'][idx]) + '\n')
 			target.close()
 
 def read_graph(G, file_path = './node_coordinates_test.txt'):
@@ -197,7 +193,7 @@ def read_graph(G, file_path = './node_coordinates_test.txt'):
 			if count == 0:
 				node_name = int(line)
 			elif count == 1:
-				data = line.replace('[','').replace(']','').split(' ')
+				data = line.split(' ')
 
 				flag = 0
 
@@ -211,7 +207,7 @@ def read_graph(G, file_path = './node_coordinates_test.txt'):
 				# print(coordinates)
 			else:
 				# print(int(line))
-				G.nodes[node_name]['pos_index'].append(int(line))
+				G.nodes[node_name]['pos_index'] = int(line)
 
 			line = target.readline()
 

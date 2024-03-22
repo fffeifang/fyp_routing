@@ -6,7 +6,7 @@ import routing.recursive_halve as rhgf
 def main():
     #G, trans = lightning_proc_backup.setup()
     G = lightning_proc.setup()
-    lightning_proc.initcoordinate(G)
+    #lightning_proc.initcoordinate(G)
     distribution = lightning_proc.initlocalpath(G)
     lightning_proc.readcoordinate(G)
     pay = lightning_proc.generate_payments(4, 1000, G, distribution)

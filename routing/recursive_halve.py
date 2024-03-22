@@ -89,12 +89,7 @@ def greedy(G, src, dst):
     frontier.put((src,[src],sys.maxsize))
     maxpathcap = 0
     firstpath = []
-    src_pos_index_set = set(G.nodes[src]['pos_index'])
-    dst_pos_index_set = set(G.nodes[dst]['pos_index'])
-    print(G.nodes[src]['pos_index'], G.nodes[dst]['pos_index']) 
-    print(src_pos_index_set, dst_pos_index_set)
-    if not src_pos_index_set.intersection(dst_pos_index_set):
-        print("无连接")
+    if G.nodes[src]['pos_index'] != G.nodes[dst]['pos_index']:
         return []
     while not(frontier.empty()):
         (vertex, path, mincap) = frontier.get()
@@ -104,8 +99,7 @@ def greedy(G, src, dst):
                 firstpath = path
         for next in G.neighbors(vertex):
             if nx.has_path(G, next, dst):
-                next_pos_index_set = set(G.nodes[next]['pos_index'])
-                if next_pos_index_set.intersection(dst_pos_index_set):
+                if G.nodes[next]['pos_index'] == G.nodes[dst]['pos_index']:
                     if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path) and mincap > maxpathcap:
                         if(G[vertex][next]['capacity'] < mincap):
                             mincap = G[vertex][next]['capacity']
@@ -115,18 +109,11 @@ def greedy(G, src, dst):
     
             
 
-def dis_Manhattan(G,a,b):
-    a_pos_index_set = set(G.nodes[a]['pos_index'])
-    b_pos_index_set = set(G.nodes[b]['pos_index'])
-    min_dis = sys.maxsize
-    for pos_index in a_pos_index_set.intersection(b_pos_index_set):
-        tmp = G.nodes[a]['pos_index'].index(pos_index) 
-        (x1, y1) = G.nodes[a]['pos'][tmp]
-        (x2, y2) = G.nodes[b]['pos'][tmp]
-        dis = abs(x1 - x2) + abs(y1 - y2)
-        if(dis < min_dis):
-            min_dis = dis 
-    return min_dis
+def dis_Manhattan(G,a,b): 
+    x1, y1 = G.nodes[a]['pos'][0], G.nodes[a]['pos'][1]
+    x2, y2 = G.nodes[b]['pos'][0], G.nodes[b]['pos'][1]
+    dis = abs(x1 - x2) + abs(y1 - y2)
+    return dis
 
 def split_routing(G, Pset, C, payment_size):
     transaction_fees = 0
@@ -207,7 +194,7 @@ def weightchoosenormal(pathset):
 
     weights_normalized = weights_discrete / np.sum(weights_discrete)
 
-    (path, pathsk) = random.choices(pathset, weights_normalized, k=1)[0]
+    (path, path_attribute) = random.choices(pathset, weights_normalized, k=1)[0]
     
     return path
 

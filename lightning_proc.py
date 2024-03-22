@@ -28,7 +28,7 @@ def setup():
 					local_path = [],
 					localed_dst = [],
 					pos = [],
-					pos_index = [],
+					pos_index = -1,
 				)
 
 	# load channels (very hacky way to non-parse the JSON ...)
@@ -131,8 +131,8 @@ def initcoordinate_spanningtree(G):#add property of coordinate
 		tmp_pos = mds.fit_transform(length_matrix)
 		pos_dict = {node: tmp_pos[i] for i, node in enumerate(subgraph.nodes())}
 		for node, coordinates in pos_dict.items():
-			G.nodes[node]['pos'].append(coordinates)
-			G.nodes[node]['pos_index'].append(index)
+			G.nodes[node]['pos'] = coordinates
+			G.nodes[node]['pos_index'] = index
 		index += 1
 	
 
@@ -159,12 +159,12 @@ def initcoordinate(G):#add property of coordinate
 		tmp_pos = mds.fit_transform(length_matrix)
 		pos_dict = {node: tmp_pos[i] for i, node in enumerate(subgraph.nodes())}
 		for node, coordinates in pos_dict.items():
-			G.nodes[node]['pos'].append(coordinates)
-			G.nodes[node]['pos_index'].append(index)
+			G.nodes[node]['pos'] = coordinates
+			G.nodes[node]['pos_index'] = index
 			
 		index += 1
 
-	with open('node_coordinates_test.txt', 'a+') as target:
+	with open('node_coordinates.txt', 'a+') as target:
 		for node in range(len(G.nodes)):
 			target.write(str(node)+"\n")
 			len_pos = len(G.nodes[node]['pos'])
@@ -183,40 +183,41 @@ def initcoordinate(G):#add property of coordinate
 
 		target.close()
 
-def read_coordinate(G, file_path = './node_coordinates_test.txt'):
-	with open(file_path, 'r') as target:
-		line = target.readline()
-		count = 0
-		node_name = 0
-		while line:
-			# print(line)
-			# print(count)
-			if count == ' ':
-				node_name = int(line)
-			elif count == 1:
-				data = line.replace('[','').replace(']','').split(' ')
-				coordinates = []
-				flag = 0
+def read_coordinate(G, file_path = './node_coordinates.txt'):
 
-				for i in range(len(data)):
-					if len(data[i]) > 1:
-						coordinates.append(float(data[i]))
-						flag += 1
-					if flag == 2:
-						break
+    with open(file_path, 'r') as target:
+        line = target.readline()
+        count = 0
+        node_name = 0
+        while line:
+            # print(line)
+            # print(count)
+            if count == 0:
+                node_name = int(line)
+            elif count == 1:
+                data = line.replace('[','').replace(']','').split(' ')
+                coordinates = []
+                flag = 0
 
-				G.nodes[node_name]['pos_index'].append(coordinates)
-				# print(coordinates)
-			else:
-				# print(int(line))
-				G.nodes[node_name]['pos'].append(int(line))
+                for i in range(len(data)):
+                    if len(data[i]) > 1:
+                        coordinates.append(float(data[i]))
+                        flag += 1
+                    if flag == 2:
+                        break
 
-			line = target.readline()
+                G.nodes[node_name]['pos_index'].append(int(line))
+                # print(coordinates)
+            else:
+                # print(int(line))
+                G.nodes[node_name]['pos'].append(coordinates)
 
-			count += 1
-			count %= 3
-		target.close()
-	return G
+            line = target.readline()
+
+            count += 1
+            count %= 3
+        target.close()
+    return G
 
 def initlocalpath(G, flag):#generate local path information	and return distribution for generating transaction 
 	ripple_node = []

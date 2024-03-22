@@ -163,28 +163,61 @@ def initcoordinate(G):#add property of coordinate
 			G.nodes[node]['pos'].append(coordinates)
 			G.nodes[node]['pos_index'].append(index)
 
-		with open('node_coordinates.txt', 'a+') as target:
-			for i, node in enumerate(subgraph.nodes()):
-				target.write(str(node)+"\n")
-				len_pos = len(G.nodes[node]['pos'])
-				for idx in range(len_pos): 
-					target.write(' ' + str(G.nodes[node]['pos'][idx]) + ' ' + str(G.nodes[node]['pos_index'][idx]) + "\n")
-			target.close()
+		
 		index += 1
 
-def read_graph(G, file_path = './node_coordinates.txt'):
+	with open('node_coordinates_test.txt', 'a+') as target:
+			for node in range(6912):
+				target.write(str(node)+"\n")
+				len_pos = len(G.nodes[node]['pos'])
+
+				if len_pos == 0:
+					target.write('\n')
+				else:
+					for idx in range(len_pos): 
+						target.write(str(G.nodes[node]['pos'][idx]) + ' ')
+					target.write('\n')
+
+					len_pos_index = len(G.nodes[node]['pos_index'])
+					for idx in range(len_pos_index): 
+						target.write(str(G.nodes[node]['pos_index'][idx]) + ' ')
+					target.write('\n')
+
+			target.close()
+
+def read_graph(G, file_path = './node_coordinates_test.txt'):
 
 	with open(file_path, 'r') as target:
 		line = target.readline()
+		count = 0
+		node_name = 0
 		while line:
-			print(line)
-			if line[0] != ' ':
+			# print(line)
+			# print(count)
+			if count == ' ':
 				node_name = int(line)
+			elif count == 1:
+				data = line.replace('[','').replace(']','').split(' ')
+				coordinates = []
+				flag = 0
+
+				for i in range(len(data)):
+					if len(data[i]) > 1:
+						coordinates.append(float(data[i]))
+						flag += 1
+					if flag == 2:
+						break
+
+				G.nodes[node_name]['pos_index'].append(coordinates)
+				# print(coordinates)
 			else:
-				data = line.replace('\n', '').split(' ')
-				G.nodes[node_name]['pos'].append(data[0])
-				G.nodes[node_name]['pos_index'].append(data[1])
+				# print(int(line))
+				G.nodes[node_name]['pos'].append(int(line))
+
 			line = target.readline()
+
+			count += 1
+			count %= 3
 		target.close()
 	return G
 

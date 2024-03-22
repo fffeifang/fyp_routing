@@ -126,7 +126,7 @@ def initcoordinate_spanningtree(G):#add property of coordinate
 			for j, node_j in enumerate(subgraph.nodes()):
 				if i != j:
 					length = nx.shortest_path_length(st, source=node_i, target=node_j)
-					length_matrix[i, j] = length
+					length_matrix[i, j] = length * 10
 		mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42, n_init=4, max_iter=100)
 		tmp_pos = mds.fit_transform(length_matrix)
 		pos_dict = {node: tmp_pos[i] for i, node in enumerate(subgraph.nodes())}
@@ -195,14 +195,8 @@ def read_graph(G, file_path = './node_coordinates_test.txt'):
 			elif count == 1:
 				data = line.split(' ')
 
-				flag = 0
-
-				for i in range(len(data)):
-					if len(data[i]) > 1:
-						G.nodes[node_name]['pos'].append(float(data[i]))
-						flag += 1
-					if flag == 2:
-						break
+				for i in range(2):
+					G.nodes[node_name]['pos'].append(float(data[i]))
 				
 				# print(coordinates)
 			else:

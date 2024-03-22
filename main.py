@@ -8,6 +8,7 @@ def main():
     G = lightning_proc.setup()
     lightning_proc.initcoordinate(G)
     distribution = lightning_proc.initlocalpath(G)
+    lightning_proc.readcoordinate(G)
     pay = lightning_proc.generate_payments(4, 1000, G, distribution)
     #pay = lightning_proc_backup.generate_payments(4, 10000, trans, G)
 

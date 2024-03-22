@@ -154,7 +154,7 @@ def initcoordinate(G):#add property of coordinate
 			for j, node_j in enumerate(subgraph.nodes()):
 				if i != j:
 					length = nx.shortest_path_length(subgraph, source=node_i, target=node_j)
-					length_matrix[i, j] = length
+					length_matrix[i, j] = length * 10#cooridinate tooooo small
 		mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42, n_init=4, max_iter=100)
 		tmp_pos = mds.fit_transform(length_matrix)
 		pos_dict = {node: tmp_pos[i] for i, node in enumerate(subgraph.nodes())}
@@ -222,7 +222,7 @@ def initlocalpath(G, flag):#generate local path information	and return distribut
 	ripple_node = []
 	ripple_nodecnt = []
 
-	with open('trances/ripple.graph_CREDIT_LINKS', 'r') as f:
+	with open('traces/ripple.graph_CREDIT_LINKS', 'r') as f:
 		for line in f:
 			source = int(line.split()[0])
 			destination = int(line.split()[1])
@@ -287,6 +287,18 @@ def initlocalpath(G, flag):#generate local path information	and return distribut
 					G.nodes[sender]['local_path'].append((receiver,gy.greedy_pc(G,sender,receiver)))
 				G.nodes[sender]['localed_dst'].append(receiver)	
 	return distribution
+
+def updatelocalpath(G, flag):
+	for i in range(len(G.nodes())):
+		if(G.nodes[i]['localed_dst'] != []):
+			G.nodes[i]['local_localpath'] = []
+			for dst in G.nodes[i]['localed_dst']:
+				if(flag == 0):#greedy decided by skewness
+					G.nodes[i]['local_path'].append((dst,gy.greedy_fs(G,i,dst)))
+				else:#greedy decided by capacity
+					G.nodes[i]['local_path'].append((dst,gy.greedy_pc(G,i,dst)))
+ 
+
 def get_random_sdpair(len, count):
 	pairlist = []
 	random.seed(12)

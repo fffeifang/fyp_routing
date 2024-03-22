@@ -8,6 +8,7 @@ import sys
 import collections
 #from routing.greedy import greedy_fs
 from queue import Queue
+import lightning_proc
 
 def findpaths(G, payment, k):
     local_G = G.copy()
@@ -20,7 +21,7 @@ def findpaths(G, payment, k):
     q = queue.Queue()
     q.put(payment)
     loop = 0
-    while (not q.empty()) or solved_size < payment_size:
+    while (not q.empty()) or (solved_size < payment_size):
         loop+=1
         if(loop > 50): #limit on loop
             return None, None
@@ -44,7 +45,10 @@ def findpaths(G, payment, k):
             q.put(next_payment)
             q.put(next_payment)
     if(solved_size >= payment_size):
+        print(path_set, cap_set)
         return path_set, cap_set
+    else:
+        return None, None
 
 
          
@@ -65,14 +69,17 @@ def probpath(G, src, dst, payment_size):
     else:
         path = greedy(G, src, dst)
         print("greedy path")
-    path_cap = sys.maxsize
-    for i in range(len(path)-1): 
-                path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"])
-                
-                if payment_size/path_cap > 0.8 :
-                    p =  i 
-                    return False, path[p], path[:p+1]
-    return True, 0, path
+    if(path != []):
+        path_cap = sys.maxsize
+        for i in range(len(path)-1): 
+                    path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"])
+                    
+                    if payment_size/path_cap > 0.9 :
+                        p =  i 
+                        return False, path[p], path[:p+1]
+        return True, 0, path
+    else:
+        return False, src, []
 
 
 import collections
@@ -84,7 +91,10 @@ def greedy(G, src, dst):
     firstpath = []
     src_pos_index_set = set(G.nodes[src]['pos_index'])
     dst_pos_index_set = set(G.nodes[dst]['pos_index'])
+    print(G.nodes[src]['pos_index'], G.nodes[dst]['pos_index']) 
+    print(src_pos_index_set, dst_pos_index_set)
     if not src_pos_index_set.intersection(dst_pos_index_set):
+        print("无连接")
         return []
     while not(frontier.empty()):
         (vertex, path, mincap) = frontier.get()
@@ -99,8 +109,8 @@ def greedy(G, src, dst):
                     if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path) and mincap > maxpathcap:
                         if(G[vertex][next]['capacity'] < mincap):
                             mincap = G[vertex][next]['capacity']
-                        path.append(next)
-                        frontier.put((next, path, mincap))
+                        new_path = path + [next]
+                        frontier.put((next, new_path, mincap))
     return firstpath
     
             
@@ -201,7 +211,6 @@ def weightchoosenormal(pathset):
     
     return path
 
-
 def routing(G, cur_payments):
     throughput_pay = 0
     transaction_fees = 0
@@ -211,8 +220,13 @@ def routing(G, cur_payments):
     throughput_total = 0
     num_splited = 0
     num_direct = 0
+    cnt = 0
     #total_max_path_length = 0
     for payment in cur_payments:
+        cnt += 1
+        if (cnt == 100):# update local path
+            distribution = lightning_proc.updatelocalpath(G, 0)
+            cnt = 0
         src = payment[0]
         dst = payment[1]
         payment_size = payment[2]
@@ -241,7 +255,7 @@ def routing(G, cur_payments):
             for i in range(len(path)-1): 
                 path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"]) 
                 
-                if payment_size/path_cap > 0.8:
+                if payment_size/path_cap > 0.9:
                     print("split prob")
                     flag_split = True
                     Pset, C = findpaths(G, payment_copy, 10)
@@ -254,6 +268,8 @@ def routing(G, cur_payments):
             Pset, C = findpaths(G, payment_copy, 10)
             if not (Pset is None or C is None):
                 success = True
+            else:
+                print("split prob fail !!")
 
         if success and flag_split:
             split_success, transaction_fees = split_routing(G, Pset, C, payment_size)

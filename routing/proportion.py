@@ -8,8 +8,11 @@ import sys
 import collections
 #from routing.greedy import greedy_fs
 from queue import Queue
-def findpaths(G, payment, k):
-    local_G = G.copy()
+import heapq
+import copy
+
+def findpaths(G, payment):
+    local_G = copy.deepcopy(G)
     src = payment[0]
     dst = payment[1]
     payment_size = payment[2]
@@ -27,7 +30,7 @@ def findpaths(G, payment, k):
         cur_src = cur_payment[0]
         cur_dst = cur_payment[1]
         cur_paymentsize = cur_payment[2]
-        cur_last = cur_paymentsize[3]
+        cur_last = cur_payment[3]
         success1, bp, cur_path = probpath(local_G, cur_src, cur_dst, cur_paymentsize)
         if success1:
             if(cur_last != -1):
@@ -82,38 +85,52 @@ def probpath(G, src, dst, payment_size):
         path = greedy(G, src, dst)
         print("greedy path")
     path_cap = sys.maxsize
-    for i in range(len(path)-1): 
-                path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"])
-                
-                if payment_size/path_cap > 0.8 :
-                    p =  i 
-                    return False, path[p], path[:p+1]
-    return True, 0, path
+    if(path != []):
+        for i in range(len(path)-1): 
+                    path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"])
+                    
+                    if payment_size/path_cap > 0.8 :
+                        p =  i 
+                        return False, path[p], path[:p+1]
+        return True, 0, path
+    else:
+        return False, src, []
 
 
 import collections
 
 def greedy(G, src, dst):
-    frontier = Queue()
-    frontier.put((src,[src],sys.maxsize))
+    frontier = []
+    heapq.heappush(frontier, (-sys.maxsize, [src], src))
     maxpathcap = 0
     firstpath = []
+    visited = set()
+    
     if G.nodes[src]['pos_index'] != G.nodes[dst]['pos_index']:
         return []
-    while not(frontier.empty()):
-        (vertex, path, mincap) = frontier.get()
-        if(vertex == dst):
-            if(mincap > maxpathcap):
+
+    while frontier:
+        #print(maxpathcap)
+        mincap, path, vertex = heapq.heappop(frontier)
+        visited.add(vertex) 
+        mincap = -mincap
+        if(mincap < maxpathcap):
+            continue
+        if vertex == dst:
+            if mincap > maxpathcap:
                 maxpathcap = mincap
                 firstpath = path
+            continue
+        
         for next in G.neighbors(vertex):
-            if nx.has_path(G, next, dst):
-                if G.nodes[next]['pos_index'] == G.nodes[dst]['pos_index']:
-                    if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path) and mincap > maxpathcap:
-                        if(G[vertex][next]['capacity'] < mincap):
-                            mincap = G[vertex][next]['capacity']
+            if nx.has_path(G, next, dst) and G.nodes[next]['pos_index'] == G.nodes[dst]['pos_index']:
+                if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path) and (next not in visited):
+                    new_mincap = min(mincap, G[vertex][next]['capacity'])
+                    if new_mincap > maxpathcap:
                         new_path = path + [next]
-                        frontier.put((next, new_path, mincap))
+                        #print(new_mincap, new_path)
+                        heapq.heappush(frontier, (-new_mincap, new_path, next))
+
     return firstpath
     
             
@@ -128,7 +145,7 @@ def split_routing(G, Pset, C, payment_size):
     transaction_fees = 0
     breakpoint_p = -1
     breakpoint_i = -1
-    for j in range(len(Pset)-1):
+    for j in range(len(Pset)):
         path = Pset[j]
         sent = C[j]
         for i in range(len(path)-1):
@@ -151,6 +168,30 @@ def split_routing(G, Pset, C, payment_size):
     else:
         print("split成功")    
         return True, transaction_fees
+def greedy_backup(G, src, dst):
+    frontier = Queue()
+    frontier.put((src,[src],sys.maxsize))
+    maxpathcap = 0
+    firstpath = []
+    visited = set()
+    if G.nodes[src]['pos_index'] != G.nodes[dst]['pos_index']:
+        return []
+    while not(frontier.empty()):
+        (vertex, path, mincap) = frontier.get()
+        if(vertex == dst):
+            if(mincap > maxpathcap):
+                maxpathcap = mincap
+                firstpath = path
+        for next in G.neighbors(vertex):
+            if nx.has_path(G, next, dst):
+                if G.nodes[next]['pos_index'] == G.nodes[dst]['pos_index']:
+                    if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path) and mincap > maxpathcap and (next not in visited):
+                        if(G[vertex][next]['capacity'] < mincap):
+                            mincap = G[vertex][next]['capacity']
+                        new_path = path + [next]
+                        visited.add(next)
+                        frontier.put((next, new_path, mincap))
+    return firstpath
 
 def direct_routing(G, path, payment):  
     src = payment[0]
@@ -251,14 +292,14 @@ def routing(G, cur_payments):
                 if payment_size/path_cap > 0.8:
                     print("split prob")
                     flag_split = True
-                    Pset, C = findpaths(G, payment_copy, 10)
+                    Pset, C = findpaths(G, payment_copy)
                     if not (Pset is None or C is None):
                         success = True
                     break
         else:
             print("split prob")
             flag_split = True
-            Pset, C = findpaths(G, payment_copy, 10)
+            Pset, C = findpaths(G, payment_copy)
             if not (Pset is None or C is None):
                 success = True
 

@@ -9,8 +9,10 @@ import collections
 from scipy import stats
 #from routing.greedy import greedy_fs
 from queue import Queue
+import heapq
+import copy
 def findpaths(G, payment, k):
-    local_G = G.copy()
+    local_G = copy.deepcopy()
     src = payment[0]
     dst = payment[1]
     payment_size = payment[2]
@@ -93,27 +95,14 @@ def find_next_nodes_balanced(G, bp, dst, paymentsize):
         
         total_adjusted_payment = sum(payment for _, payment in nextlist)
         if total_adjusted_payment < paymentsize:
-            tmp_success, tmp_list = find_next_nodes_proportion(G, bp, dst, paymentsize)
-            return  tmp_success, tmp_list
+            scale_factor = paymentsize / total_adjusted_payment
+            nextlist = [(next, min(payment * scale_factor, 0.9 * next_cap)) for next, payment in nextlist]
         else:
             return True, nextlist
-
-def find_next_nodes_proportion(G, bp, dst, paymentsize):
-    tmp_nextlist = []
-    nextlist = []
-    sum_cap = 0
-    for next in set(G.neighbors(bp)):
-        if nx.has_path(G, next, dst):
-            if (dis_Manhattan(next, dst) < dis_Manhattan(bp, dst)):
-                tmp_nextlist.append((next, G[bp][next]["capacity"]))
-                sum_cap += G[bp][next]["capacity"]
-    if(paymentsize > 0.9 * sum_cap):
-        return False, []
-    else:
-        for item in tmp_nextlist:
-            (next, next_cap) = item
-            nextlist.append((next, next_cap/sum_cap*paymentsize))
-    return True, nextlist
+        if total_adjusted_payment < paymentsize:
+            return False
+        else:
+            return True, nextlist
     
 def update_graph_capacity(G, path, payment):
     for i in range(len(path) - 1):
@@ -143,26 +132,37 @@ def probpath(G, src, dst, payment_size):
 import collections
 
 def greedy(G, src, dst):
-    frontier = Queue()
-    frontier.put((src,[src],sys.maxsize))
+    frontier = []
+    heapq.heappush(frontier, (-sys.maxsize, [src], src))
     maxpathcap = 0
     firstpath = []
+    visited = set()
+    
     if G.nodes[src]['pos_index'] != G.nodes[dst]['pos_index']:
         return []
-    while not(frontier.empty()):
-        (vertex, path, mincap) = frontier.get()
-        if(vertex == dst):
-            if(mincap > maxpathcap):
+
+    while frontier:
+        #print(maxpathcap)
+        mincap, path, vertex = heapq.heappop(frontier)
+        visited.add(vertex) 
+        mincap = -mincap
+        if(mincap < maxpathcap):
+            continue
+        if vertex == dst:
+            if mincap > maxpathcap:
                 maxpathcap = mincap
                 firstpath = path
+            continue
+        
         for next in G.neighbors(vertex):
-            if nx.has_path(G, next, dst):
-                if G.nodes[next]['pos_index'] == G.nodes[dst]['pos_index']:
-                    if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path) and mincap > maxpathcap:
-                        if(G[vertex][next]['capacity'] < mincap):
-                            mincap = G[vertex][next]['capacity']
+            if nx.has_path(G, next, dst) and G.nodes[next]['pos_index'] == G.nodes[dst]['pos_index']:
+                if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path) and (next not in visited):
+                    new_mincap = min(mincap, G[vertex][next]['capacity'])
+                    if new_mincap > maxpathcap:
                         new_path = path + [next]
-                        frontier.put((next, new_path, mincap))
+                        #print(new_mincap, new_path)
+                        heapq.heappush(frontier, (-new_mincap, new_path, next))
+
     return firstpath
     
             

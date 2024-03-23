@@ -9,9 +9,11 @@ import collections
 #from routing.greedy import greedy_fs
 from queue import Queue
 import lightning_proc
+import heapq
+import copy
 
-def findpaths(G, payment, k):
-    local_G = G.copy()
+def findpaths(G, payment):
+    local_G = copy.deepcopy(G)
     src = payment[0]
     dst = payment[1]
     payment_size = payment[2]
@@ -19,37 +21,33 @@ def findpaths(G, payment, k):
     cap_set = []
     solved_size  = 0
     q = queue.Queue()
-    q.put(payment)
+    q.put([src, dst, payment_size, payment_size])
     loop = 0
-    while (not q.empty()) or (solved_size < payment_size):
+    while (solved_size < payment_size):
         loop+=1
-        if(loop > 50): #limit on loop
+        if(loop > 100): #limit on loop
             return None, None
         cur_payment = q.get()
         cur_src = cur_payment[0]
         cur_dst = cur_payment[1]
         cur_paymentsize = cur_payment[2]
+        real_paymentsize = cur_payment[3]
         if(cur_paymentsize < 1): #limit on minimum paymentsize
             return None, None 
         success, bp, cur_path = probpath(local_G, cur_src, cur_dst, cur_paymentsize)
         if success:
             update_graph_capacity(local_G, cur_path, cur_paymentsize)
             path_set.append(cur_path)
-            cap_set.append(cur_paymentsize) 
+            cap_set.append(real_paymentsize) 
             solved_size += cur_paymentsize
         else:
             if(bp != cur_src):
                 path_set.append(cur_path)
-                cap_set.append(cur_paymentsize)
-            next_payment = (bp, dst, cur_paymentsize/2)
+                cap_set.append(real_paymentsize)
+            next_payment = [bp, dst, cur_paymentsize/2 + 0.5,cur_paymentsize/2] #精确
             q.put(next_payment)
             q.put(next_payment)
-    if(solved_size >= payment_size):
-        print(path_set, cap_set)
-        return path_set, cap_set
-    else:
-        return None, None
-
+    return path_set, cap_set
 
          
 def update_graph_capacity(G, path, payment):
@@ -81,32 +79,40 @@ def probpath(G, src, dst, payment_size):
     else:
         return False, src, []
 
-
-import collections
-
 def greedy(G, src, dst):
-    frontier = Queue()
-    frontier.put((src,[src],sys.maxsize))
+    frontier = []
+    heapq.heappush(frontier, (-sys.maxsize, [src], src))
     maxpathcap = 0
     firstpath = []
+    visited = set()
+    
     if G.nodes[src]['pos_index'] != G.nodes[dst]['pos_index']:
         return []
-    while not(frontier.empty()):
-        (vertex, path, mincap) = frontier.get()
-        if(vertex == dst):
-            if(mincap > maxpathcap):
+
+    while frontier:
+        #print(maxpathcap)
+        mincap, path, vertex = heapq.heappop(frontier)
+        visited.add(vertex) 
+        mincap = -mincap
+        if(mincap < maxpathcap):
+            continue
+        if vertex == dst:
+            if mincap > maxpathcap:
                 maxpathcap = mincap
                 firstpath = path
+            continue
+        
         for next in G.neighbors(vertex):
-            if nx.has_path(G, next, dst):
-                if G.nodes[next]['pos_index'] == G.nodes[dst]['pos_index']:
-                    if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path) and mincap > maxpathcap:
-                        if(G[vertex][next]['capacity'] < mincap):
-                            mincap = G[vertex][next]['capacity']
+            if nx.has_path(G, next, dst) and G.nodes[next]['pos_index'] == G.nodes[dst]['pos_index']:
+                if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path) and (next not in visited):
+                    new_mincap = min(mincap, G[vertex][next]['capacity'])
+                    if new_mincap > maxpathcap:
                         new_path = path + [next]
-                        frontier.put((next, new_path, mincap))
+                        #print(new_mincap, new_path)
+                        heapq.heappush(frontier, (-new_mincap, new_path, next))
+
     return firstpath
-    
+
             
 
 def dis_Manhattan(G,a,b): 
@@ -119,7 +125,7 @@ def split_routing(G, Pset, C, payment_size):
     transaction_fees = 0
     breakpoint_p = -1
     breakpoint_i = -1
-    for j in range(len(Pset)-1):
+    for j in range(len(Pset)):
         path = Pset[j]
         sent = C[j]
         for i in range(len(path)-1):
@@ -222,6 +228,7 @@ def routing(G, cur_payments):
         #path = nx.shortest_path(G, src, dst, weight=weighted_capacity)
         if not nx.has_path(G, src, dst):
             continue
+        print(G.nodes[src]['localed_dst'])
         if dst in G.nodes[src]['localed_dst']:
             for item in G.nodes[src]['local_path']:
                 (receiver, pathset) = item 
@@ -245,14 +252,14 @@ def routing(G, cur_payments):
                 if payment_size/path_cap > 0.9:
                     print("split prob")
                     flag_split = True
-                    Pset, C = findpaths(G, payment_copy, 10)
+                    Pset, C = findpaths(G, payment_copy)
                     if not (Pset is None or C is None):
                         success = True
                     break
         else:
             print("split prob")
             flag_split = True
-            Pset, C = findpaths(G, payment_copy, 10)
+            Pset, C = findpaths(G, payment_copy)
             if not (Pset is None or C is None):
                 success = True
             else:

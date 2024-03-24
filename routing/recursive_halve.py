@@ -27,7 +27,10 @@ def findpaths(G, payment):
         loop+=1
         if(loop > 100): #limit on loop
             return None, None
-        cur_payment = q.get()
+        if(not q.empty()):
+            cur_payment = q.get()
+        else:
+            return None, None
         cur_src = cur_payment[0]
         cur_dst = cur_payment[1]
         cur_paymentsize = cur_payment[2]
@@ -58,12 +61,11 @@ def update_graph_capacity(G, path, payment):
 
 
 def probpath(G, src, dst, payment_size):
-    if dst in G.nodes[src]['localed_dst']:
-        for item in G.nodes[src]['local_path']:
-            (receiver, pathset) = item 
-            if(receiver == dst):
-                path = weightchoosenormal(pathset)
-            print("local path")
+    if dst in G.nodes[src]['local_dst']:
+        print(G.nodes[src]['local_dst'])
+        pathset = G.nodes[src]['local_path'][dst]
+        print(pathset)
+        path = weightchoosenormal(pathset) 
     else:
         path = greedy(G, src, dst)
         print("greedy path")
@@ -187,6 +189,8 @@ def direct_routing(G, path, payment):
         return True, transaction_fees
     
 def weightchoosenormal(pathset):
+    print("local pathset")
+    print(pathset)
     samples = np.random.normal(0, 1, 100000)
 
     samples_positive = samples[samples > 0]
@@ -225,16 +229,18 @@ def routing(G, cur_payments):
         payment_size = payment[2]
         payment_copy = [src, dst, payment_size]
         overallpayment += payment_size
+        print("============================")
+        print(src, dst, payment_size)
         #path = nx.shortest_path(G, src, dst, weight=weighted_capacity)
         if not nx.has_path(G, src, dst):
             continue
-        print(G.nodes[src]['localed_dst'])
-        if dst in G.nodes[src]['localed_dst']:
-            for item in G.nodes[src]['local_path']:
-                (receiver, pathset) = item 
-                if(receiver == dst):
-                    path = weightchoosenormal(pathset)
-                print("local path")
+        if dst in G.nodes[src]['local_dst']:
+            print("local_dst")
+            print(G.nodes[src]['local_dst'])
+            pathset = G.nodes[src]['local_path'][dst]
+            print('local_path')
+            print(pathset)
+            path = weightchoosenormal(pathset) 
         else:
             path = greedy(G, src, dst)
             print("greedy path")

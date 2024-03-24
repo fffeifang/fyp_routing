@@ -12,8 +12,7 @@ def main():
     distribution = lightning_proc.initlocalpath(G, 0)
     lightning_proc.read_coordinate(G)
     pay = lightning_proc.generate_payments(4, 100, G, distribution)
-    #pay = lightning_proc_backup.generate_payments(4, 10000, trans, G) 
-    rh.routing(G, pay)
+    p.routing(G, pay)
 
 if __name__ == "__main__":
  	main()

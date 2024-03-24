@@ -25,8 +25,8 @@ def setup():
 					max_split = 100,
 					#default max split
 					#local path of frequent nodes
-					local_path = [],
-					localed_dst = [],
+					local_path = {},
+					local_dst = set(),
 					pos = [],
 					pos_index = -1,
 				)
@@ -272,24 +272,19 @@ def initlocalpath(G, flag):#generate local path information	and return distribut
 			#G.nodes[sender]['local_path'].append((receiver,gy.greedy_pc(G,sender,receiver)))
 			
 			if nx.has_path(G, sender, receiver):
-				if(flag == 0):#greedy decided by skewness
-					G.nodes[sender]['local_path'].append((receiver,gy.greedy_fs(G,sender,receiver)))
-				else:#greedy decided by capacity
-					G.nodes[sender]['local_path'].append((receiver,gy.greedy_pc(G,sender,receiver)))
-				G.nodes[sender]['localed_dst'].append(receiver)	
+				pathset = gy.greedy_fs(G, sender, receiver) if flag == 0 else gy.greedy_pc(G, sender, receiver)#greedy decided by capacity(1) or skewness(0)
+				G.nodes[sender]['local_path'][receiver] = pathset
+				G.nodes[sender]['local_dst'].add(receiver)
 	return distribution
 
 def updatelocalpath(G, flag):
 	for i in range(len(G.nodes())):
-		if(G.nodes[i]['localed_dst'] != []):
-			G.nodes[i]['local_localpath'] = []
-			for dst in G.nodes[i]['localed_dst']:
-				if(flag == 0):#greedy decided by skewness
-					G.nodes[i]['local_path'].append((dst,gy.greedy_fs(G,i,dst)))
-				else:#greedy decided by capacity
-					G.nodes[i]['local_path'].append((dst,gy.greedy_pc(G,i,dst)))
+		if(G.nodes[i]['local_dst'] != set()):
+			G.nodes[i]['local_path'] = {}
+			for dst in G.nodes[i]['local_dst']:
+				pathset = gy.greedy_fs(G, i, dst) if flag == 0 else gy.greedy_pc(G, i, dst)#greedy decided by capacity(1) or skewness(0)
+				G.nodes[i]['local_path'][dst] = pathset
  
-
 def get_random_sdpair(len, count):
 	pairlist = []
 	random.seed(12)
@@ -319,16 +314,16 @@ def generate_payments(seed, nflows, G, distribution):
 
 		# sample random src/dst pair for which there exists a path
 		src, dst = random.choice(src_dst)
-		tmp = list(G.nodes())
-		#print(tmp)
-		src, dst = tmp[src], tmp[dst]
+		# tmp = list(G.nodes())
+		# #print(tmp)
+		# src, dst = tmp[src], tmp[dst]
 		if not nx.has_path(G, src, dst):
 			continue
 
 		# sample transaction value
 		val = random.choice(quantity)
 
-		payments.append((src, dst, val, 1, 0))
+		payments.append((src, dst, val,))
 		#print(src, dst)
 
 

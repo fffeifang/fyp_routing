@@ -11,8 +11,10 @@ from scipy import stats
 from queue import Queue
 import heapq
 import copy
-def findpaths(G, payment, k):
-    local_G = copy.deepcopy()
+import lightning_proc
+
+def findpaths(G, payment):
+    local_G = copy.deepcopy(G)
     src = payment[0]
     dst = payment[1]
     payment_size = payment[2]
@@ -20,32 +22,38 @@ def findpaths(G, payment, k):
     cap_set = []
     solved_size  = 0
     q = queue.Queue()
-    q.put((src, dst, payment_size, -1))#-1 -> last, as the node before split 
+    q.put([src, dst, payment_size, -1, payment_size])#-1 -> last, as the node before split 
     loop = 0
-    while (not q.empty()) or solved_size < payment_size:
+    while solved_size < payment_size:
         loop += 1
         if(loop > 50): # limit on loop
             return None, None
-        cur_payment = q.get()
+        if(not q.empty()):
+            cur_payment = q.get()
+        else:
+            return None, None
         cur_src = cur_payment[0]
         cur_dst = cur_payment[1]
         cur_paymentsize = cur_payment[2]
-        cur_last = cur_paymentsize[3]
+        cur_last = cur_payment[3]
+        real_paymentsize = cur_payment[4]
         success1, bp, cur_path = probpath(local_G, cur_src, cur_dst, cur_paymentsize)
         if success1:
             if(cur_last != -1):
                 cur_path = [cur_last] + cur_path
             update_graph_capacity(local_G, cur_path, cur_paymentsize) 
+            path_set.append(cur_path)
+            cap_set.append(real_paymentsize) 
             solved_size += cur_paymentsize
         else:
             success2, nextlist = find_next_nodes_balanced(local_G, bp, dst, cur_paymentsize)
             if success2:
                 if(bp != cur_src):
                     path_set.append(cur_path)
-                    cap_set.append(cur_paymentsize)
+                    cap_set.append(real_paymentsize)
                 for i in range(len(nextlist)):
                     (next_node, next_payment) = nextlist[i]
-                    q.put(next_node, dst, next_payment, bp)
+                    q.put([next_node, dst, next_payment+0.5, bp, next_payment])
             else:#fail or roll back?
                 return None, None
     return path_set, cap_set 
@@ -58,7 +66,7 @@ def find_next_nodes_balanced(G, bp, dst, paymentsize):
     sum_cap = 0
     for next in set(G.neighbors(bp)):
         if nx.has_path(G, next, dst):
-            if (dis_Manhattan(next, dst) < dis_Manhattan(bp, dst)):
+            if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, bp, dst)):
                 fund = G[bp][next]["capacity"]
                 fund_sum = G[bp][next]["capacity"] + G[next][bp]["capacity"]
                 fund_avg = fund_sum/2
@@ -100,7 +108,7 @@ def find_next_nodes_balanced(G, bp, dst, paymentsize):
         else:
             return True, nextlist
         if total_adjusted_payment < paymentsize:
-            return False
+            return False, []
         else:
             return True, nextlist
     
@@ -110,12 +118,13 @@ def update_graph_capacity(G, path, payment):
         G[path[i+1]][path[i]]["capacity"] += payment 
 
 def probpath(G, src, dst, payment_size):
-    if dst in G.nodes[src]['localed_dst']:
-        for item in G.nodes[src]['local_path']:
-            (receiver, pathset) = item 
-            if(receiver == dst):
-                path = weightchoosenormal(pathset)
-            print("local path")
+    if dst in G.nodes[src]['local_dst']:
+            print("local_dst")
+            print(G.nodes[src]['local_dst'])
+            pathset = G.nodes[src]['local_path'][dst]
+            print('local_path')
+            print(pathset)
+            path = weightchoosenormal(pathset) 
     else:
         path = greedy(G, src, dst)
         print("greedy path")
@@ -266,8 +275,13 @@ def routing(G, cur_payments):
     throughput_total = 0
     num_splited = 0
     num_direct = 0
+    cnt = 0
     #total_max_path_length = 0
     for payment in cur_payments:
+        cnt += 1
+        if (cnt == 100):# update local path
+            distribution = lightning_proc.updatelocalpath(G, 0)
+            cnt = 0
         src = payment[0]
         dst = payment[1]
         payment_size = payment[2]
@@ -276,12 +290,13 @@ def routing(G, cur_payments):
         #path = nx.shortest_path(G, src, dst, weight=weighted_capacity)
         if not nx.has_path(G, src, dst):
             continue
-        if dst in G.nodes[src]['localed_dst']:
-            for item in G.nodes[src]['local_path']:
-                (receiver, pathset) = item 
-                if(receiver == dst):
-                    path = weightchoosenormal(pathset)
-                print("local path")
+        if dst in G.nodes[src]['local_dst']:
+            print("local_dst")
+            print(G.nodes[src]['local_dst'])
+            pathset = G.nodes[src]['local_path'][dst]
+            print('local_path')
+            print(pathset)
+            path = weightchoosenormal(pathset) 
         else:
             path = greedy(G, src, dst)
             print("greedy path")
@@ -296,17 +311,17 @@ def routing(G, cur_payments):
             for i in range(len(path)-1): 
                 path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"]) 
                 
-                if payment_size/path_cap > 0.8:
+                if payment_size/path_cap > 0.9:
                     print("split prob")
                     flag_split = True
-                    Pset, C = findpaths(G, payment_copy, 10)
+                    Pset, C = findpaths(G, payment_copy)
                     if not (Pset is None or C is None):
                         success = True
                     break
         else:
             print("split prob")
             flag_split = True
-            Pset, C = findpaths(G, payment_copy, 10)
+            Pset, C = findpaths(G, payment_copy)
             if not (Pset is None or C is None):
                 success = True
 

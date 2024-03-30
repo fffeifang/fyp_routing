@@ -9,8 +9,6 @@ import operator
 import sys
 from datetime import datetime
 
-random.seed(datetime.now())
-
 def dist(c1, c2):
 	common_prefix_length = 0
 	shorter_length = np.minimum(len(c1), len(c2))
@@ -129,24 +127,22 @@ def routePay(G, edges, landmarks, coordinate, parent, src, dst, payment_size):
 						next_hop = n
 			if next_hop != -1:
 				path[l].append((v,next_hop))
-				G[v][next_hop]["capacity"] -= c[l] + c[l]*G[v][next_hop]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
-				G[next_hop][v]["capacity"] += c[l] + c[l]*G[v][next_hop]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
+				G[v][next_hop]["capacity"] -= c[l] + c[l]*G[v][next_hop]["proportion_fee"] / 1000000 + G[v][next_hop]["base_fee"]
+				G[next_hop][v]["capacity"] += c[l] + c[l]*G[v][next_hop]["proportion_fee"] / 1000000 + G[v][next_hop]["base_fee"]
 				v = next_hop
 			else:
 				fail = True
 	## routing fail, roll back
 	if fail:
 		for l in range(L):
-			probing_messages += len(path[l])
 			for e in path[l]:
-				G[e[0]][e[1]]["capacity"] += c[l]
-				G[e[1]][e[0]]["capacity"] -= c[l]
+				G[e[0]][e[1]]["capacity"] += c[l] + c[l]*G[e[0]][e[1]]["proportion_fee"] / 1000000 + G[e[0]][e[1]]["base_fee"]
+				G[e[1]][e[0]]["capacity"] -= c[l] + c[l]*G[e[0]][e[1]]["proportion_fee"] / 1000000 + G[e[0]][e[1]]["base_fee"]
 		return G, 0, fee, coordinate, parent
 	else:
 		coordinate = {}
 		parent = {}
 		for l in range(L):
-			probing_messages += len(path[l])
 			coordinate[l] = []
 			parent[l] = []
 			for i in range(N):
@@ -164,9 +160,9 @@ def routePay(G, edges, landmarks, coordinate, parent, src, dst, payment_size):
 				c2 = G[v][u]["capacity"]
 				coordinate, parent = setCred(edges, landmarks, parent, coordinate, u, v, c1, GG)
 				coordinate, parent = setCred(edges, landmarks, parent, coordinate, v, u, c2, GG)
-				GG[u][v]["capacity"] -= c[l] + c[l]*GG[v][next_hop]["proportion_fee"] / 1000000 + GG[path[i]][path[i + 1]]["base_fee"]
-				GG[v][u]["capacity"] += c[l] + c[l]*GG[v][next_hop]["proportion_fee"] / 1000000 + GG[path[i]][path[i + 1]]["base_fee"]
-				fee += c[l]*GG[v][next_hop]["proportion_fee"] / 1000000 + GG[path[i]][path[i + 1]]["base_fee"]
+				GG[u][v]["capacity"] -= c[l] + c[l]*GG[v][next_hop]["proportion_fee"] / 1000000 + GG[v][next_hop]["base_fee"]
+				GG[v][u]["capacity"] += c[l] + c[l]*GG[v][next_hop]["proportion_fee"] / 1000000 + GG[v][next_hop]["base_fee"]
+				fee += c[l]*GG[v][next_hop]["proportion_fee"] / 1000000 + GG[v][next_hop]["base_fee"]
 				
 		return G, payment_size, fee, coordinate, parent
 def routing(G, payments, L=2): # input graph and number of landmarks 

@@ -5,8 +5,8 @@ from random import shuffle
 from itertools import islice
 import sys
 import time
-import micro_random
-import max_flow
+import routing.cmp.micro_random as micro_random
+import routing.cmp.max_flow as max_flow
 
 def routing(G, cur_payments, threshold, num_max_cache): 
   throughput = 0 
@@ -54,4 +54,5 @@ def routing(G, cur_payments, threshold, num_max_cache):
     num_micro = 1
   print(num_delivered)
   print(throughput)
+  print(transaction_fees)
   return throughput, transaction_fees/throughput, num_delivered, total_probing_messages, total_max_path_length, 1.0*cache_hit/num_micro, 1.0*num_entry/num_active, micro_throughput, micro_probing_messages

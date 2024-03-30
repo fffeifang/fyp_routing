@@ -7,7 +7,7 @@ import cvxpy as cp
 from itertools import islice
 import sys
 import time
-import max_flow
+import routing.cmp.max_flow as max_flow
 
 class RoutingTable:
   def __init__(self):

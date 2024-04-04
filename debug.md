@@ -185,4 +185,11 @@ the transactions are devided into the frequent node pair and others. In local th
 I've almost finished writing the scripts, the greedy function still have some problem maybe caused by the coordinate. According to the ripple dataset, 8% node pairs runs 80% transaction, so the local pathset can be used up quickly. And if we update after using the pair, would it be centralized and it seems can't speed up the routing? and if we make it heristic as last time you said, how to assign the posssibiliy.
 
 3.22
-The new balanced split algrithom is that the parameter is the weighted fund skewness of each channel times the proportion of capacity. first try to split with the parameter times average capacity and then scaling them or achieve 90% of the capacity until it reach the original transaction quantity. if it fails, then use proportion split. And there's still sth wrong about the coordinate, I 'll update if I find the excat problem. 
+The new balanced split algrithom is that the parameter is the weighted fund skewness of each channel times the proportion of capacity. first try to split with the parameter times average capacity and then scaling them or achieve 90% of the capacity until it reach the original transaction quantity. if it fails, then use proportion split. And there's still sth wrong about the coordinate, I 'll update if I find the excat problem.
+
+4.3
+how to simulate the process of passing the message of malicious nodes?
+try to find new dataset of transaction quantity
+cooridinate optimization 
+react flashh and speedymurmurs
+write testbed

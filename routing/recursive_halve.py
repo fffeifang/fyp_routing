@@ -236,7 +236,7 @@ def routing(G, cur_payments):
     for payment in cur_payments:
         cnt += 1
         if (cnt == 100):# update local path
-            distribution = lightning_proc.updatelocalpath(G, 0)
+            distribution = lightning_proc.updatelocalpath(G, 1)
             cnt = 0
         src = payment[0]
         dst = payment[1]
@@ -336,5 +336,6 @@ def routing(G, cur_payments):
     success_volume = throughput_pay/overallpayment
     print(throughput_pay)
     print(overallpayment)
+    transaction_fee = throughput_total - throughput_pay 
     print(throughput_total - throughput_pay)
-    return num_delivered, throughput_pay, throughput_total, success_ratio, success_volume
+    return num_delivered, throughput_pay, throughput_total, success_ratio, success_volume, transaction_fee

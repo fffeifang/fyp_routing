@@ -29,6 +29,7 @@ def setup():
 					local_dst = set(),
 					pos = [],
 					pos_index = -1,
+					flag_attacker = -1
 				)
 
 	# load channels (very hacky way to non-parse the JSON ...)
@@ -212,7 +213,10 @@ def read_coordinate(G, file_path = './node_coordinates_test.txt'):
 def initlocalpath(G, flag):#generate local path information	and return distribution for generating transaction 
 	ripple_node = []
 	ripple_nodecnt = []
-
+	for a, b in G.edges():
+		if G[a][b]['base_fee'] > 10000 or G[a][b]['proportion_fee'] > 1000:
+			G.nodes[a]['flag_attacker'] = 1
+			G.nodes[b]['flag_attacker'] = 1
 	with open('traces/ripple.graph_CREDIT_LINKS', 'r') as f:
 		for line in f:
 			source = int(line.split()[0])

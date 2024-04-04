@@ -22,9 +22,9 @@ distribution_counter = Counter(distribution)
 
 sorted_distribution = sorted(distribution_counter.items(), key=lambda item: item[1], reverse=True)
 
-with open('distribution_counts.txt', 'w') as file:
-    for pair, count in sorted_distribution:
-        file.write(f'{pair}: {count} \n')
+# with open('distribution_counts.txt', 'w') as file:
+#     for pair, count in sorted_distribution:
+#         file.write(f'{pair}: {count} \n')
 
 sum_count = 0
 for pair, count in sorted_distribution:
@@ -35,7 +35,7 @@ print(len(sorted_distribution))
 for pair, count in sorted_distribution:
     tmp += count
     count_pair += 1 
-    if(tmp > 0.8 * sum_count):
+    if(tmp >= 0.4 * sum_count):
         print(count)
         print(count_pair)
         break

@@ -125,7 +125,7 @@ def probpath(G, src, dst, payment_size):
         cnt_path = 0
         path_cap_max = 0
         path = []
-        while (cnt_path < 5): #cnt_path can change
+        while (cnt_path < 2): #cnt_path can change
             path_candidate = weightchoosenormal(pathset)
             if path_candidate != []:
                 path_cap = sys.maxsize
@@ -179,7 +179,7 @@ def greedy(G, src, dst):
         
         for next in G.neighbors(vertex):
             if nx.has_path(G, next, dst) and G.nodes[next]['pos_index'] == G.nodes[dst]['pos_index']:
-                if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path) and (next not in visited):
+                if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path) and (next not in visited) and G.nodes[next]['flag_attacker'] != 1:
                     new_mincap = min(mincap, G[vertex][next]['capacity'])
                     if new_mincap > maxpathcap:
                         new_path = path + [next]
@@ -317,7 +317,7 @@ def routing(G, cur_payments):
             pathset = G.nodes[src]['local_path'][dst]
             path_cap_max = 0
             path = []
-            while (cnt_path < 5): #cnt_path can change
+            while (cnt_path < 2): #cnt_path can change
                 path_candidate = weightchoosenormal(pathset)
                 if path_candidate != []:
                     print(path)
@@ -394,6 +394,7 @@ def routing(G, cur_payments):
     success_volume = throughput_pay/overallpayment
     print(throughput_pay)
     print(overallpayment)
+    transaction_fee = throughput_total - throughput_pay 
     print(throughput_total - throughput_pay)
-    return num_delivered, throughput_pay, throughput_total, success_ratio, success_volume
+    return num_delivered, throughput_pay, throughput_total, success_ratio, success_volume, transaction_fee
  

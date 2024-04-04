@@ -26,9 +26,14 @@ def greedy_pc(G, src, dst, k = 16):
             G.remove_edge(last_path[j],last_path[j+1])
 
             try:
+                attacker = False
                 new_path = nx.shortest_path(G, src, dst)
                 if new_path not in candidates and new_path not in paths:
-                    candidates.append(new_path)
+                    for node in new_path:
+                        if G.nodes[node]['flag_attacker'] == -1:
+                            attacker = True
+                    if not attacker:
+                        candidates.append(new_path)
             except nx.NetworkXNoPath:
                 pass
 
@@ -83,9 +88,14 @@ def greedy_fs(G, src, dst, k = 16):# choose the avarage paymentsize to initializ
             G.remove_edge(last_path[j],last_path[j+1])
 
             try:
+                attacker = False
                 new_path = nx.shortest_path(G, src, dst)
                 if new_path not in candidates and new_path not in paths:
-                    candidates.append(new_path)
+                    for node in new_path:
+                        if G.nodes[node]['flag_attacker'] == -1:
+                            attacker = True
+                    if not attacker:
+                        candidates.append(new_path)
             except nx.NetworkXNoPath:
                 pass
 

@@ -78,6 +78,6 @@ def routing(G, cur_payments):
   success_volume = throughput_pay/overall_pay
   print(throughput_pay)
   print(overall_pay)
-  print(throughput_total)
+  print(throughput_total - throughput_pay)
   return num_delivered, throughput_pay, throughput_total, success_ratio, success_volume
 

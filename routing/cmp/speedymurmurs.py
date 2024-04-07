@@ -95,6 +95,7 @@ def setCred(edges, landmarks, parent, coordinate, u, v, c, G):
  
 def routePay(G, edges, landmarks, coordinate, parent, src, dst, payment_size):
 	fee = 0
+	max_path_length = 0
 	L = len(landmarks)
 	N = len(G)
 	nb = {}
@@ -164,7 +165,7 @@ def routePay(G, edges, landmarks, coordinate, parent, src, dst, payment_size):
 				GG[v][u]["capacity"] += c[l] + c[l]*GG[v][next_hop]["proportion_fee"] / 1000000 + GG[v][next_hop]["base_fee"]
 				fee += c[l]*GG[v][next_hop]["proportion_fee"] / 1000000 + GG[v][next_hop]["base_fee"]
 				
-		return G, payment_size, fee, coordinate, parent
+		return G, payment_size, fee, coordinate, parent, max_path_length
 def routing(G, payments, L=2): # input graph and number of landmarks 
 	landmarks = []
 	sorted_nodes = sorted(G.degree, key=lambda x: x[1], reverse=True)
@@ -188,13 +189,15 @@ def routing(G, payments, L=2): # input graph and number of landmarks
 	num_delivered = 0
 	transaction_fees = 0
 	overall_payment = 0
+	total_max_path_length = 0
 	for payment in payments:
 		src = payment[0]
 		dst = payment[1]
 		payment_size = payment[2]
 		overall_payment += payment_size
-		G, delivered, fee, coordinate, parent= routePay(G, edges, landmarks, coordinate, parent, src,dst, payment_size)
+		G, delivered, fee, coordinate, parent, max_path_length= routePay(G, edges, landmarks, coordinate, parent, src,dst, payment_size)
 		if not delivered < payment[2]:
+			total_max_path_length += max_path_length
 			num_delivered += 1
 		throughput += delivered
 		transaction_fees += fee

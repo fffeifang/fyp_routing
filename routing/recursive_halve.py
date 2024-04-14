@@ -105,10 +105,11 @@ def greedy(G, src, dst):
     
     if G.nodes[src]['pos_index'] != G.nodes[dst]['pos_index']:
         return []
-
+    malicious_node = []
     while frontier:
         #print(maxpathcap)
         mincap, path, vertex = heapq.heappop(frontier)
+        malicious_node += G.nodes[vertex]["flag_attacker"]
         visited.add(vertex) 
         mincap = -mincap
         if(mincap < maxpathcap):
@@ -118,9 +119,8 @@ def greedy(G, src, dst):
                 maxpathcap = mincap
                 firstpath = path
             continue
-        
         for next in G.neighbors(vertex):
-            if nx.has_path(G, next, dst) and G.nodes[next]['pos_index'] == G.nodes[dst]['pos_index']:
+            if nx.has_path(G, next, dst) and G.nodes[next]['pos_index'] == G.nodes[dst]['pos_index'] and (next not in malicious_node):
                 if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, vertex, dst)) and (next not in path) and (next not in visited):
                     new_mincap = min(mincap, G[vertex][next]['capacity'])
                     if new_mincap > maxpathcap:
@@ -145,6 +145,13 @@ def split_routing(G, Pset, C, payment_size):
         path = Pset[j]
         sent = C[j]
         for i in range(len(path)-1):
+            if G[path[i]][path[i+1]]['base_fee'] > 10000 or G[path[i]][path[i+1]]['proportion_fee'] > 1000:
+                for k in range(i):
+                    G.nodes[path[k]]["flag_attacker"].append(path[i])
+                    G.nodes[path[k]]["flag_attacker"].append(path[i+1])
+                breakpoint_p = j
+                breakpoint_i = i
+                break
             G[path[i]][path[i+1]]["capacity"] -= sent + sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
             G[path[i+1]][path[i]]["capacity"] += sent + sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
             transaction_fees += sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]

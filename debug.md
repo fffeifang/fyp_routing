@@ -193,3 +193,12 @@ try to find new dataset of transaction quantity
 cooridinate optimization 
 react flashh and speedymurmurs
 write testbed
+
+4.14
+the previous node?
+
+4.19
+the modified script is in process.
+we should set the number of retries caused by the malicious node for **the whole probe** or every subpath?
+and do I need to learn how to write testbed?
+when I write the part Measurement on Lightning Network Performance, should I write the explaination of the operation like the steps of rebalancing like introducing HTLC in multi-hop payments?

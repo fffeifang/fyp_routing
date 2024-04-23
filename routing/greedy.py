@@ -28,9 +28,11 @@ def greedy_pc(G, src, dst, k = 16):
             try:
                 attacker = False
                 new_path = nx.shortest_path(G, src, dst)
+                malicious_node = []
                 if new_path not in candidates and new_path not in paths:
                     for node in new_path:
-                        if G.nodes[node]['flag_attacker'] == -1:
+                        malicious_node += G.nodes[node]['flag_attacker']
+                        if node in malicious_node:
                             attacker = True
                     if not attacker:
                         candidates.append(new_path)
@@ -90,10 +92,12 @@ def greedy_fs(G, src, dst, k = 16):# choose the avarage paymentsize to initializ
             try:
                 attacker = False
                 new_path = nx.shortest_path(G, src, dst)
+                malicious_node = []
                 if new_path not in candidates and new_path not in paths:
                     for node in new_path:
-                        if G.nodes[node]['flag_attacker'] == -1:
-                            attacker = True
+                        malicious_node += G.nodes[node]['flag_attacker']
+                        if node in malicious_node:
+                            attacker = True    
                     if not attacker:
                         candidates.append(new_path)
             except nx.NetworkXNoPath:

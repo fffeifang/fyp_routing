@@ -13,7 +13,8 @@ import heapq
 import copy
 import lightning_proc
 
-def findpaths(G, payment):
+def findpaths(G, payment, k = 16):
+    retry = 0
     local_G = copy.deepcopy(G)
     src = payment[0]
     dst = payment[1]
@@ -37,8 +38,15 @@ def findpaths(G, payment):
         cur_paymentsize = cur_payment[2]
         cur_last = cur_payment[3]
         real_paymentsize = cur_payment[4]
-        success1, bp, cur_path = probpath(local_G, cur_src, cur_dst, cur_paymentsize)
-        if success1:
+        success1, bp, cur_path, flagattack = probpath(local_G, cur_src, cur_dst, cur_paymentsize)
+        while flagattack:
+            if (retry > k):
+               return None, None
+            success1, bp, cur_path, flagattack = probpath(local_G, cur_src, cur_dst, cur_paymentsize) 
+            retry += 1
+        if cur_path == []:
+            return None, None
+        if success1 :
             if(cur_last != -1):
                 cur_path = [cur_last] + cur_path
             update_graph_capacity(local_G, cur_path, cur_paymentsize) 
@@ -118,6 +126,7 @@ def update_graph_capacity(G, path, payment):
         G[path[i+1]][path[i]]["capacity"] += payment 
 
 def probpath(G, src, dst, payment_size):
+    flagattacker = False
     if dst in G.nodes[src]['local_dst']:
         print(G.nodes[src]['local_dst'])
         pathset = G.nodes[src]['local_path'][dst]
@@ -141,15 +150,18 @@ def probpath(G, src, dst, payment_size):
             cnt_path += 1 
     else:
         path = greedy(G, src, dst)
+        if(path == -1):
+            flagattacker = True
         print("greedy path")
     path_cap = sys.maxsize
-    for i in range(len(path)-1): 
-                path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"])
-                
-                if payment_size/path_cap > 0.8 :
-                    p =  i 
-                    return False, path[p], path[:p+1]
-    return True, 0, path
+    if(not flagattacker):
+        for i in range(len(path)-1): 
+                    path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"])
+                    
+                    if payment_size/path_cap > 0.8 :
+                        p =  i 
+                        return False, path[p], path[:p+1], flagattacker
+    return True, 0, path, flagattacker
 
 
 import collections
@@ -185,7 +197,15 @@ def greedy(G, src, dst):
                         new_path = path + [next]
                         #print(new_mincap, new_path)
                         heapq.heappush(frontier, (-new_mincap, new_path, next))
-    return firstpath
+    if(len(firstpath) > 1):
+        for i in range(len(firstpath)-1): 
+            if G[firstpath[i]][firstpath[i+1]]['base_fee'] > 10000 or G[firstpath[i]][firstpath[i+1]]['proportion_fee'] > 1000:
+                for k in range(i):
+                    G.nodes[firstpath[k]]["flag_attacker"].append(firstpath[i+1]) 
+                return -1    
+        return firstpath
+    else:
+        return []
     
             
 
@@ -195,35 +215,57 @@ def dis_Manhattan(G,a,b):
     dis = abs(x1 - x2) + abs(y1 - y2)
     return dis
     
-def split_routing(G, Pset, C, payment_size):
+def split_routing(G, Pset, C, payment):
     transaction_fees = 0
     breakpoint_p = -1
     breakpoint_i = -1
-    for j in range(len(Pset)-1):
+    fees = []
+    for j in range(len(Pset)):
         path = Pset[j]
         sent = C[j]
-        for i in range(len(path)-1):
-            if G[path[i]][path[i+1]]['base_fee'] > 10000 or G[path[i]][path[i+1]]['proportion_fee'] > 1000:
-                for k in range(i):
-                    G.nodes[path[k]]["flag_attacker"].append(path[i])
-                    G.nodes[path[k]]["flag_attacker"].append(path[i+1])
-                breakpoint_p = j
-                breakpoint_i = i
-                break
-            G[path[i]][path[i+1]]["capacity"] -= sent + sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
-            G[path[i+1]][path[i]]["capacity"] += sent + sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
-            transaction_fees += sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
-            if(G[path[i]][path[i+1]]["capacity"] < 0):
-                breakpoint_p = j
-                breakpoint_i = i
-                break
+        if len(path) > 2:
+            fee = [0] * (len(path) - 1) 
+            fee[len(path)-2] = sent + sent * G[path[len(path)-2]][path[len(path)-1]]["proportion_fee"] / 1000000 + G[path[len(path)-2]][path[len(path)-1]]["base_fee"]
+            for i in range(1, len(path)-1):
+                cur = len(path)-2-i 
+                fee[cur] = fee[cur+1] + fee[cur+1] * G[path[cur]][path[cur+1]]["proportion_fee"] / 1000000 + G[path[cur]][path[cur+1]]["base_fee"]
+            fees.append(fee)
+            for i in range(len(path)-1):
+                if G[path[i]][path[i+1]]['base_fee'] > 10000 or G[path[i]][path[i+1]]['proportion_fee'] > 1000:
+                    for k in range(i):
+                        G.nodes[path[k]]["flag_attacker"].append(path[i+1])
+                    breakpoint_p = j
+                    breakpoint_i = i
+                    break
+                G[path[i]][path[i+1]]["capacity"] -= fee[i]
+                G[path[i+1]][path[i]]["capacity"] += fee[i]
+                if(path[0] == payment[0]):
+                    transaction_fees += fee[0] - sent
+                if(G[path[i]][path[i+1]]["capacity"] < 0):
+                    breakpoint_p = j
+                    breakpoint_i = i
+                    break
+        elif len(path) == 2:
+            if G[path[0]][path[1]]['base_fee'] > 10000 or G[path[0]][path[1]]['proportion_fee'] > 1000:
+                    G.nodes[path[0]]["flag_attacker"].append(path[1])
+                    breakpoint_p = j - 1
+                    breakpoint_i = len(Pset[j-1]) - 2
+                    break
+            fee = [sent + sent * G[path[0]][path[1]]['proportion_fee'] + G[path[0]][path[1]]['base_fee']]
+            fees.append(fee)
+            if(path[0] == payment[0]):
+                    transaction_fees += fee[0] - sent
+        else:
+            breakpoint_p = j - 1
+            breakpoint_i = len(Pset[j-1]) - 2
     if(breakpoint_p != -1):# roil back
         for j in range(breakpoint_p+1):
             path = Pset[j]
             sent = C[j]
+            fee = fees[j]
             for i in range(breakpoint_i+1):
-                G[path[i]][path[i+1]]["capacity"] += sent + sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
-                G[path[i+1]][path[i]]["capacity"] -= sent + sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
+                G[path[i]][path[i+1]]["capacity"] += fee[i]
+                G[path[i+1]][path[i]]["capacity"] -= fee[i]
         # remove atomicity
         return False, None
     else:
@@ -290,7 +332,7 @@ def routing(G, cur_payments):
     throughput_pay = 0
     transaction_fees = 0
     num_delivered = 0
-    total_probing_messages = 0
+    # total_probing_messages = 0
     overallpayment = 0
     throughput_total = 0
     num_splited = 0
@@ -349,8 +391,8 @@ def routing(G, cur_payments):
         else:
             path = greedy(G, src, dst)
             print("greedy path")
-            total_probing_messages += len(path)-1
-            if path != []:
+            # total_probing_messages += len(path)-1
+            if path != [] and path != -1:
                 print(path)
                 path_cap = sys.maxsize
                 for i in range(len(path)-1): 
@@ -375,7 +417,7 @@ def routing(G, cur_payments):
                     print("split prob fail !!")
 
         if success and flag_split:
-            split_success, transaction_fees = split_routing(G, Pset, C, payment_size)
+            split_success, transaction_fees = split_routing(G, Pset, C, payment_copy)
             if split_success is True:
                 print("split!") 
                 num_delivered += 1
@@ -400,7 +442,6 @@ def routing(G, cur_payments):
     success_volume = throughput_pay/overallpayment
     print(throughput_pay)
     print(overallpayment)
-    transaction_fee = throughput_total - throughput_pay 
-    print(throughput_total - throughput_pay)
-    return num_delivered, throughput_pay, throughput_total, success_ratio, success_volume, transaction_fee
+    print(transaction_fees)
+    return num_delivered, throughput_pay, throughput_total, success_ratio, success_volume, transaction_fees
  

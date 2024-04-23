@@ -9,13 +9,14 @@ import routing.cmp.flash as f
 import time
 def main():
     G = lightning_proc.setup()
-    lightning_proc.initcoordinate(G)
+    #lightning_proc.initcoordinate(G)
     distribution = lightning_proc.initlocalpath(G, 0)
-    #lightning_proc.read_coordinate(G)
+    lightning_proc.read_coordinate(G)
     # caution! local path num
-    pay = lightning_proc.generate_payments(4, 300, G, distribution)
+    pay = lightning_proc.generate_payments(4, 100, G, distribution)
     # caution! retry 
     start_time = time.time()
+    # sp.routing(G, pay)
     num_delivered, throughput_pay, throughput_total, success_ratio, success_volume, transaction_fee = b.routing(G, pay)
     end_time = time.time()
     execution_time = end_time - start_time

@@ -192,16 +192,26 @@ def routing(G, payment):
 	# check whether credits are enough when launching payments 
 	if not (sum(flows_to_send) < d-1e-6):
 		index_p = 0
+		payhops = []
 		for index_p in range(len(path_set)):
 			path = path_set[index_p]
+			sent = flows_to_send[index_p]
+			payhop = [0] * (len(path) - 1) 
+			payhop[len(path)-2] = sent + sent * G[path[len(path)-2]][path[len(path)-1]]["proportion_fee"] / 1000000 + G[path[len(path)-2]][path[len(path)-1]]["base_fee"]
+			# fee += sent * G[path[len(path)-2]][path[len(path)-1]]["proportion_fee"] / 1000000 + G[path[len(path)-2]][path[len(path)-1]]["base_fee"] 
+			for i in range(1, len(path)-1):
+				cur = len(path)-2-i 
+				payhop[cur] = payhop[cur+1] + payhop[cur+1] * G[path[cur]][path[cur+1]]["proportion_fee"] / 1000000 + G[path[cur]][path[cur+1]]["base_fee"]
+				# fee += payhop[cur+1] * G[path[cur]][path[cur+1]]["proportion_fee"] / 1000000 + G[path[cur]][path[cur+1]]["base_fee"]
+			payhops.append(payhop)
 			for i in range(len(path)-1):
-				if (G[path[i]][path[i+1]]["capacity"] < flows_to_send[index_p]-1e-6):
+				if (G[path[i]][path[i+1]]["capacity"] < payhop[i]-1e-6):
 					print(path[i], path[i+1], G[path[i]][path[i+1]]["capacity"], flows_to_send[index_p], "fail XXXXXXXX")
-					# return 0, probing_messages, 0
+					return 0, 0, probing_messages, 0
 				else: 
 					# update channel states
-					G[path[i]][path[i+1]]["capacity"] -= flows_to_send[index_p]
-					G[path[i+1]][path[i]]["capacity"] += flows_to_send[index_p]
+					G[path[i]][path[i+1]]["capacity"] -= payhop[i]
+					G[path[i+1]][path[i]]["capacity"] += payhop[i]
 		return payment[2], cost_res, probing_messages, max_path_length 
 	else: 
 		# fail 

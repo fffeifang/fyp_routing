@@ -165,13 +165,19 @@ def split_routing(G, Pset, C, payment_size):
     transaction_fees = 0
     breakpoint_p = -1
     breakpoint_i = -1
+    fees = []
     for j in range(len(Pset)):
         path = Pset[j]
         sent = C[j]
+        fee = [0] * (len(path) - 1) 
+        fee[len(path)-2] = sent + sent * G[path[len(path)-2]][path[len(path)-1]]["proportion_fee"] / 1000000 + G[path[len(path)-2]][path[len(path)-1]]["base_fee"]
+        for i in range(1, len(path)-1):
+            cur = len(path)-2-i 
+            fee[cur] = fee[cur+1] + fee[cur+1] * G[path[cur]][path[cur+1]]["proportion_fee"] / 1000000 + G[path[cur]][path[cur+1]]["base_fee"]
+        fees.append(fee)
         for i in range(len(path)-1):
             if G[path[i]][path[i+1]]['base_fee'] > 10000 or G[path[i]][path[i+1]]['proportion_fee'] > 1000:
                 for k in range(i):
-                    G.nodes[path[k]]["flag_attacker"].append(path[i])
                     G.nodes[path[k]]["flag_attacker"].append(path[i+1])
                 breakpoint_p = j
                 breakpoint_i = i

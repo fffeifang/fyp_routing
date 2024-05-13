@@ -81,6 +81,8 @@ def routing(G, payment, mega_table, num_max_cache):
   sent_list = []
   visited_paths = []
   path = path_set[0]
+  payhops = []
+  flag_rb = False
   while True:
     if len(path)-1 > max_path_length: 
         max_path_length = len(path)-1
@@ -100,10 +102,18 @@ def routing(G, payment, mega_table, num_max_cache):
     visited_paths.append(path)
 
     # update path capacity 
+    payhop = [0] * (len(path) - 1) 
+    payhop[len(path)-2] = sent + sent * G[path[len(path)-2]][path[len(path)-1]]["proportion_fee"] / 1000000 + G[path[len(path)-2]][path[len(path)-1]]["base_fee"]
+    fee += sent * G[path[len(path)-2]][path[len(path)-1]]["proportion_fee"] / 1000000 + G[path[len(path)-2]][path[len(path)-1]]["base_fee"] 
+    for i in range(1, len(path)-1):
+        cur = len(path)-2-i 
+        payhop[cur] = payhop[cur+1] + payhop[cur+1] * G[path[cur]][path[cur+1]]["proportion_fee"] / 1000000 + G[path[cur]][path[cur+1]]["base_fee"]
+        fee += payhop[cur+1] * G[path[cur]][path[cur+1]]["proportion_fee"] / 1000000 + G[path[cur]][path[cur+1]]["base_fee"]
+    payhops.append(payhop)
     for i in range(len(path)-1):
-      G[path[i]][path[i+1]]["capacity"] -= sent
-      G[path[i+1]][path[i]]["capacity"] += sent
-      fee += G[path[i]][path[i+1]]["cost"]*sent
+      G[path[i]][path[i+1]]["capacity"] -= payhop[i]
+      G[path[i+1]][path[i]]["capacity"] += payhop[i]
+      # fee += G[path[i]][path[i+1]]["cost"]*sent
 
     if not (sum(sent_list) < payment_size and len(sent_list) < len(all_paths)):
       break 
@@ -121,9 +131,10 @@ def routing(G, payment, mega_table, num_max_cache):
   if sum(sent_list) < payment[2]:
     for i in range(len(visited_paths)):
       p = visited_paths[i]
+      payhoptmp = payhops[i]
       for j in range(len(p)-1):
-        G[p[j]][p[j+1]]["capacity"] += sent_list[i]
-        G[p[j+1]][p[j]]["capacity"] -= sent_list[i]
+        G[p[j]][p[j+1]]["capacity"] += payhoptmp[j]
+        G[p[j+1]][p[j]]["capacity"] -= payhoptmp[j]
 
     # sent, cost_res, msgs, max_path_length = max_flow.routing(G, payment)
     # return sent, cost_res, probing_msg+msgs, 0, found

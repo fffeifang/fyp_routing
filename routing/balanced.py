@@ -200,7 +200,7 @@ def greedy(G, src, dst):
     if(len(firstpath) > 1):
         for i in range(len(firstpath)-1): 
             if G[firstpath[i]][firstpath[i+1]]['base_fee'] > 10000 or G[firstpath[i]][firstpath[i+1]]['proportion_fee'] > 1000:
-                for k in range(i):
+                for k in range(i + 1):
                     G.nodes[firstpath[k]]["flag_attacker"].append(firstpath[i+1]) 
                 return -1    
         return firstpath
@@ -365,7 +365,7 @@ def routing(G, cur_payments):
             pathset = G.nodes[src]['local_path'][dst]
             path_cap_max = 0
             path = []
-            while (cnt_path < 2): #cnt_path can change
+            while (cnt_path < 5): #cnt_path can change
                 path_candidate = weightchoosenormal(pathset)
                 if path_candidate != []:
                     print(path)

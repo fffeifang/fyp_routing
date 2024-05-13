@@ -26,11 +26,11 @@ def setRoute(G, landmarks, edges, coordinate, parent):
 	L = len(landmarks)
 	N = len(G)
 
-	nb = {}
-	for i in range(N):
-		nb[i] = []
-	for e in edges:
-		nb[e[0]].append(e[1])
+	# nb = {}
+	# for i in range(N):
+	# 	nb[i] = []
+	# for e in edges:
+	# 	nb[e[0]].append(e[1])
 
 	for l in range(L):
 		q = []
@@ -39,7 +39,7 @@ def setRoute(G, landmarks, edges, coordinate, parent):
 		child_index = np.zeros(N)
 		while len(q) != 0:
 			node = q.pop(0)
-			for n in nb[node]:
+			for n in set(G.neighbors(node)):
 				if n != root and len(coordinate[l][n]) == 0:
 					if (G[node][n]["capacity"] > 0 and G[n][node]["capacity"] > 0):
 						parent[l][n] = node
@@ -98,11 +98,11 @@ def routePay(G, edges, landmarks, coordinate, parent, src, dst, payment_size):
 	max_path_length = 0
 	L = len(landmarks)
 	N = len(G)
-	nb = {}
-	for i in range(N):
-		nb[i] = []
-	for e in edges:
-		nb[e[0]].append(e[1])
+	# nb = {}
+	# for i in range(N):
+	# 	nb[i] = []
+	# for e in edges:
+	# 	nb[e[0]].append(e[1])
 
 	## split payment into L shares
 	c = np.multiply(np.ones(L), float(payment_size)/float(L))
@@ -118,14 +118,15 @@ def routePay(G, edges, landmarks, coordinate, parent, src, dst, payment_size):
 		while (not fail) and (v != dst):
 			next_hop = -1
 			min_dist = N * N
-			for n in nb[v]:
+			for n in set(G.neighbors(v)):
 				c1 = coordinate[l][v]
 				c2 = coordinate[l][n]
 				c3 = coordinate[l][dst]
-				if dist(c2, c3) < dist(c1, c3) and G[v][n]["capacity"] >= c[l]:
+				if dist(c2, c3) < dist(c1, c3) and G[v][n]["capacity"] >= c[l] + c[l]*G[v][n]["proportion_fee"] / 1000000 + G[v][n]["base_fee"]:
 					if dist(c2, c3) < min_dist:
 						min_dist = dist(c2, c3)
 						next_hop = n
+			# if next_hop != -1 and G[v][n]["capacity"] >= c[l] + c[l]*G[v][next_hop]["proportion_fee"] / 1000000 + G[v][next_hop]["base_fee"]:
 			if next_hop != -1:
 				path[l].append((v,next_hop))
 				G[v][next_hop]["capacity"] -= c[l] + c[l]*G[v][next_hop]["proportion_fee"] / 1000000 + G[v][next_hop]["base_fee"]
@@ -139,7 +140,7 @@ def routePay(G, edges, landmarks, coordinate, parent, src, dst, payment_size):
 			for e in path[l]:
 				G[e[0]][e[1]]["capacity"] += c[l] + c[l]*G[e[0]][e[1]]["proportion_fee"] / 1000000 + G[e[0]][e[1]]["base_fee"]
 				G[e[1]][e[0]]["capacity"] -= c[l] + c[l]*G[e[0]][e[1]]["proportion_fee"] / 1000000 + G[e[0]][e[1]]["base_fee"]
-		return G, 0, fee, coordinate, parent
+		return G, 0, fee, coordinate, parent, 0
 	else:
 		coordinate = {}
 		parent = {}
@@ -151,9 +152,47 @@ def routePay(G, edges, landmarks, coordinate, parent, src, dst, payment_size):
 				parent[l].append([])
 		coordinate, parent = setRoute(G, landmarks, edges, coordinate, parent)
 
+		cnt = 0
+		payhops = []
 		for l in range(L):
+			cnt += 1
 			if len(path[l]) > max_path_length: 
 				max_path_length = len(path[l])
+			payhop = [0] * (len(path[l]))
+			e = path[l][len(path[l]) - 1]
+			payhop[len(path[l])-1] = c[l] + c[l] * GG[e[0]][e[1]]["proportion_fee"] / 1000000 + GG[e[0]][e[1]]["base_fee"]	
+			fee += c[l] * GG[e[0]][e[1]]["proportion_fee"] / 1000000 + GG[e[0]][e[1]]["base_fee"]
+			for i in range(1, len(path[l])):	
+				cur = len(path)-1-i
+				e = path[l][cur] 
+				payhop[cur] = payhop[cur + 1] + payhop[cur + 1] * GG[e[0]][e[1]]["proportion_fee"] / 1000000 + GG[e[0]][e[1]]["base_fee"]
+				fee += payhop[cur + 1] * GG[e[0]][e[1]]["proportion_fee"] / 1000000 + GG[e[0]][e[1]]["base_fee"]
+			payhops.append(payhop)
+			flag = False
+			tmp = 0
+			for e in path[l]:
+				u = e[0]
+				v = e[1]
+				if  G[u][v]["capacity"] <= payhop[tmp]:
+					flag = True
+					break
+				tmp += 1
+			if flag: # roll back
+				for i in range(cnt):
+					tmp = 0
+					payhoptmp = payhops[i]
+					for e in path[i]:
+						u = e[0]
+						v = e[1]
+						# c1 = G[u][v]["capacity"]
+						# c2 = G[v][u]["capacity"]
+						# coordinate, parent = setCred(edges, landmarks, parent, coordinate, u, v, c1, GG)
+						# coordinate, parent = setCred(edges, landmarks, parent, coordinate, v, u, c2, GG)
+						GG[u][v]["capacity"] += payhoptmp[tmp]
+						GG[v][u]["capacity"] -= payhoptmp[tmp]
+						tmp += 1
+					return  G, 0, fee, coordinate, parent, 0
+			tmp = 0
 			for e in path[l]:
 				u = e[0]
 				v = e[1]
@@ -161,11 +200,12 @@ def routePay(G, edges, landmarks, coordinate, parent, src, dst, payment_size):
 				c2 = G[v][u]["capacity"]
 				coordinate, parent = setCred(edges, landmarks, parent, coordinate, u, v, c1, GG)
 				coordinate, parent = setCred(edges, landmarks, parent, coordinate, v, u, c2, GG)
-				GG[u][v]["capacity"] -= c[l] + c[l]*GG[v][next_hop]["proportion_fee"] / 1000000 + GG[v][next_hop]["base_fee"]
-				GG[v][u]["capacity"] += c[l] + c[l]*GG[v][next_hop]["proportion_fee"] / 1000000 + GG[v][next_hop]["base_fee"]
-				fee += c[l]*GG[v][next_hop]["proportion_fee"] / 1000000 + GG[v][next_hop]["base_fee"]
+				GG[u][v]["capacity"] -= payhop[tmp]
+				GG[v][u]["capacity"] += payhop[tmp]
+				tmp += 1
 				
 		return G, payment_size, fee, coordinate, parent, max_path_length
+	
 def routing(G, payments, L=2): # input graph and number of landmarks 
 	landmarks = []
 	sorted_nodes = sorted(G.degree, key=lambda x: x[1], reverse=True)
@@ -195,7 +235,7 @@ def routing(G, payments, L=2): # input graph and number of landmarks
 		dst = payment[1]
 		payment_size = payment[2]
 		overall_payment += payment_size
-		G, delivered, fee, coordinate, parent, max_path_length= routePay(G, edges, landmarks, coordinate, parent, src,dst, payment_size)
+		G, delivered, fee, coordinate, parent, max_path_length= routePay(G, edges, landmarks, coordinate, parent, src, dst, payment_size)
 		if not delivered < payment[2]:
 			total_max_path_length += max_path_length
 			num_delivered += 1

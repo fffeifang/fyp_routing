@@ -17,11 +17,12 @@ def main():
     # caution! retry 
     start_time = time.time()
     # sp.routing(G, pay)
-    num_delivered, throughput_pay, throughput_total, success_ratio, success_volume, transaction_fee = b.routing(G, pay)
+    # num_delivered, throughput_pay, throughput_total, success_ratio, success_volume, transaction_fee = b.routing(G, pay)
+    sm.routing(G, pay)
     end_time = time.time()
     execution_time = end_time - start_time
     print('=============================================================')
-    print(num_delivered, throughput_pay, throughput_total, success_ratio, success_volume, transaction_fee)
+    # print(num_delivered, throughput_pay, throughput_total, success_ratio, success_volume, transaction_fee)
     print(execution_time)
     # sp.routing(G, pay)
 if __name__ == "__main__":

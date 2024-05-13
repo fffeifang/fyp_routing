@@ -202,3 +202,12 @@ the modified script is in process.
 we should set the number of retries caused by the malicious node for **the whole probe** or every subpath?
 and do I need to learn how to write testbed?
 when I write the part Measurement on Lightning Network Performance, should I write the explaination of the operation like the steps of rebalancing like introducing HTLC in multi-hop payments?
+
+4.25
+for 100 transaction
+b with sk 42
+speedymurmurs 33
+sp 29
+for flash I've modified the script but we use the poison distribution so its hard to identify the elephant payment and mice i dont know how to set the threshold
+theres also a problem with our algrithom, not evey path in our pathset is from src to dst, some of them are src to bp, bp to dst, bp to bp. When we calculate the fee we need a complete path, should I add tag to address the problem or we should change the algrithom so that there would be all complete paths? I dont know which one more close to the real world logic.
+and I've finish the writing of the section Measurement on Lightning Network Performance

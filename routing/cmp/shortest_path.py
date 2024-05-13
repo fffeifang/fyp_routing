@@ -17,25 +17,31 @@ def direct_routing(G, path, payment):
 
     #double check(?)
     for i in range(len(path)-1): 
-      path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"] - G[path[i]][path[i + 1]]["capacity"] * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 - G[path[i]][path[i + 1]]["base_fee"])
+      path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"] - payment_size*G[path[i]][path[i+1]]["proportion_fee"] / 1000000 - G[path[i]][path[i+1]]["base_fee"])
     
     if (path_cap > payment_size):
         sent = payment_size
     else:
         return False, None
     #print("============================")
-    
+    fee = [0] * (len(path) - 1) 
+    fee[len(path)-2] = sent + sent * G[path[len(path)-2]][path[len(path)-1]]["proportion_fee"] / 1000000 + G[path[len(path)-2]][path[len(path)-1]]["base_fee"]
+    for i in range(1, len(path)-1):
+      cur = len(path)-2-i 
+      fee[cur] = fee[cur+1] + fee[cur+1] * G[path[cur]][path[cur+1]]["proportion_fee"] / 1000000 + G[path[cur]][path[cur+1]]["base_fee"]
+
     for i in range(len(path)-1):
-        G[path[i]][path[i+1]]["capacity"] -= sent + sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
-        G[path[i+1]][path[i]]["capacity"] += sent + sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
+        G[path[i]][path[i+1]]["capacity"] -= fee[i]
+        G[path[i+1]][path[i]]["capacity"] += fee[i]
         if( G[path[i]][path[i+1]]["capacity"] < 0):
             breakpoint = i
-        transaction_fees += sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
+            break
+        transaction_fees += fee[i] - payment_size
 
     if(breakpoint != -1):# fail, roll back
         for i in range(breakpoint+1):
-            G[path[i]][path[i+1]]["capacity"] += sent + sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"]
-            G[path[i+1]][path[i]]["capacity"] -= sent + sent * G[path[i]][path[i + 1]]["proportion_fee"] / 1000000 + G[path[i]][path[i + 1]]["base_fee"] 
+            G[path[i]][path[i+1]]["capacity"] += fee[i]
+            G[path[i+1]][path[i]]["capacity"] -= fee[i]
         # remove atomicity
         return False, None
 

@@ -68,7 +68,6 @@ def setup():
 					base_fee = float(base_fee),
 					proportion_fee = float(proportion_fee),
 				)
-
 	#while  there are nodes with on channel, remove them
     #nodes = [node for node in nodes if node in sourcelist or node in destinationlist]
     # 需要删除的边
@@ -87,6 +86,14 @@ def setup():
 	#relabel
 	mapping = dict(list(zip(G.nodes(), list(range(0, len(G))))))
 	G = nx.relabel_nodes(G, mapping, copy=False)
+	malicious = set()
+	for a,b in G.edges():
+		if G[a][b]["base_fee"] > 10000 or G[a][b]["proportion_fee"] > 1000:
+			# malicious.add(a)
+			malicious.add(b)
+
+	print("===========================================")
+	print("malicious", len(malicious))
 	print("number of nodes", len(G))
 	print('average channel capacity', float(sum(listC))/len(listC))
 	print('avaerage channel base fee', float(sum(base_feelist)/len(base_feelist)))
@@ -306,7 +313,7 @@ def generate_payments(seed, nflows, G, distribution):
 	# sample transaction value from poisson distribution based on https://coinloan.io/blog/what-is-lightning-network-key-facts-and-figures/
 	mean = 508484000 #msat
 	quantity = np.random.poisson(mean, nflows)
-
+	threshold = np.percentile(quantity, 90)
 	while True:
 		# are we done yet?
 		if len(payments) >= nflows:
@@ -327,7 +334,7 @@ def generate_payments(seed, nflows, G, distribution):
 		#print(src, dst)
 
 
-	return payments
+	return payments, threshold
 
 
 

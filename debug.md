@@ -211,3 +211,51 @@ sp 29
 for flash I've modified the script but we use the poison distribution so its hard to identify the elephant payment and mice i dont know how to set the threshold
 theres also a problem with our algrithom, not evey path in our pathset is from src to dst, some of them are src to bp, bp to dst, bp to bp. When we calculate the fee we need a complete path, should I add tag to address the problem or we should change the algrithom so that there would be all complete paths? I dont know which one more close to the real world logic.
 and I've finish the writing of the section Measurement on Lightning Network Performance
+
+5.17
+after adjusting flash, the success rate for 1000 transaction remain about 30%. and I change the refresh period of local path from 100 to 50 and mark the both endpoints of a malicious channel as malicious nodes, and now the suscess rate of our algorithm for 1000 transaction is 26.3%. if there are anything we can improve in the algorithm? like for now if we detect a malicious node we just fail this transaction and mark it, should we have an another try after marking the malicious node?
+1. robust malicious 
+2. topology honest+malicious(%%%%)
+3. retry 5 不衡量latency
+
+5.22
+malicious 559
+number of nodes 6912
+
+1. 1% pair
+282
+57
+225
+143392373097
+508484049314
+825376.735676229
+2. 3% pair
+286
+50
+236
+145426494053
+508483941312
+825409.5147505403
+3. 5% pair
+283
+49
+234
+143900727880
+508483441099
+825461.1678056717
+4. 20%
+263
+49
+214
+133730671886
+508482663982
+825391.3355371356
+5. 30%
+264
+52
+212
+134240176125
+508483158486
+825455.9197125435
+
+balanced backup proportion

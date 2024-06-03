@@ -37,9 +37,29 @@ def find_paths(G, src, dst):
 		for i in range(len(path)-1): 
 			probing_messages += 1
 			path_cap = np.minimum(path_cap, local_G[path[i]][path[i+1]]["capacity"])
-
-			sub_G.add_edge(path[i], path[i+1], capacity = G[path[i]][path[i+1]]["capacity"], cost = G[path[i]][path[i+1]]["cost"])
-			sub_G.add_edge(path[i+1], path[i], capacity = G[path[i+1]][path[i]]["capacity"], cost = G[path[i+1]][path[i]]["cost"])
+			cap_in, cap_out = G[path[i]][path[i+1]]["capacity"], G[path[i+1]][path[i]]["capacity"]
+			pfee_in, pfee_out = G[path[i]][path[i+1]]["proportion_fee"], G[path[i+1]][path[i]]["proportion_fee"]
+			bfee_in, bfee_out = G[path[i]][path[i+1]]["base_fee"], G[path[i+1]][path[i]]["base_fee"] 
+			sub_G.add_edge(
+					# from
+					path[i],
+					# to
+					path[i+1],
+					capacity = cap_in,
+					base_fee = bfee_in,
+					proportion_fee = pfee_in,
+				)
+			sub_G.add_edge(
+					# from
+					path[i+1],
+					# to
+					path[i],
+					capacity = cap_out,
+					base_fee = bfee_out,
+					proportion_fee = pfee_out,
+				)
+			# sub_G.add_edge(path[i], path[i+1], capacity = G[path[i]][path[i+1]]["capacity"], cost = G[path[i]][path[i+1]]["cost"])
+			# sub_G.add_edge(path[i+1], path[i], capacity = G[path[i+1]][path[i]]["capacity"], cost = G[path[i+1]][path[i]]["cost"])
 		cap_set.append(path_cap)
 
 		if len(path)-1 > max_path_length: 
@@ -97,7 +117,7 @@ def max_flow_solver(G, cur_payment, d, paths):
 			for i in range(len(path)-1):
 				G[path[i]][path[i+1]]["capacity"] -= throughput
 				G[path[i+1]][path[i]]["capacity"] += throughput
-				fee += G[path[i]][path[i+1]]["cost"]*throughput
+				fee += G[path[i]][path[i+1]]["proportion_fee"]*throughput / 1000000+ G[path[i]][path[i+1]]["base_fee"] 
 
 			return throughput, fee
 
@@ -128,11 +148,11 @@ def max_flow_solver(G, cur_payment, d, paths):
 		index_e2 = 0
 
 		for e in forwarding_edges: 
-			cost_coe1[index_e1][index_p] = OnPath(e, p)*G[e[0]][e[1]]['cost']
+			cost_coe1[index_e1][index_p] = OnPath(e, p)*G[e[0]][e[1]]["proportion_fee"] / 1000000 + G[e[0]][e[1]]["base_fee"]
 			index_e1 = index_e1+1
 
 		for e in reverse_edges:
-			cost_coe2[index_e2][index_p] = OnPath(e, p)*G[e[0]][e[1]]['cost']
+			cost_coe2[index_e2][index_p] = OnPath(e, p)*G[e[0]][e[1]]["proportion_fee"] / 1000000 + G[e[0]][e[1]]["base_fee"] 
 			index_e2 = index_e2+1
 
 	# capacity 
@@ -199,19 +219,29 @@ def routing(G, payment):
 			payhop = [0] * (len(path) - 1) 
 			payhop[len(path)-2] = sent + sent * G[path[len(path)-2]][path[len(path)-1]]["proportion_fee"] / 1000000 + G[path[len(path)-2]][path[len(path)-1]]["base_fee"]
 			# fee += sent * G[path[len(path)-2]][path[len(path)-1]]["proportion_fee"] / 1000000 + G[path[len(path)-2]][path[len(path)-1]]["base_fee"] 
-			for i in range(1, len(path)-1):
+			for i in range(1, len(path)-2):
 				cur = len(path)-2-i 
 				payhop[cur] = payhop[cur+1] + payhop[cur+1] * G[path[cur]][path[cur+1]]["proportion_fee"] / 1000000 + G[path[cur]][path[cur+1]]["base_fee"]
 				# fee += payhop[cur+1] * G[path[cur]][path[cur+1]]["proportion_fee"] / 1000000 + G[path[cur]][path[cur+1]]["base_fee"]
 			payhops.append(payhop)
 			for i in range(len(path)-1):
-				if (G[path[i]][path[i+1]]["capacity"] < payhop[i]-1e-6):
+				if ( G[path[i]][path[i+1]]["capacity"] < payhop[i]-1e-6):
 					print(path[i], path[i+1], G[path[i]][path[i+1]]["capacity"], flows_to_send[index_p], "fail XXXXXXXX")
+					for j in range(i-1):
+							G[path[j]][path[j+1]]["capacity"] += payhop[i]
+							G[path[j+1]][path[j]]["capacity"] -= payhop[i]
+					# roll back
+					for k in range(index_p):
+						payhoptmp = payhops[k]
+						p = path_set[k]
+						for j in range(len(p) - 1):
+							G[p[j]][p[j+1]]["capacity"] += payhoptmp[j]
+							G[p[j+1]][p[j]]["capacity"] -= payhoptmp[j]
 					return 0, 0, probing_messages, 0
 				else: 
 					# update channel states
-					G[path[i]][path[i+1]]["capacity"] -= payhop[i]
-					G[path[i+1]][path[i]]["capacity"] += payhop[i]
+					G[path[i]][path[i+1]]["capacity"] -= payhops[index_p][i]
+					G[path[i+1]][path[i]]["capacity"] += payhops[index_p][i]
 		return payment[2], cost_res, probing_messages, max_path_length 
 	else: 
 		# fail 

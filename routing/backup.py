@@ -12,6 +12,7 @@ from queue import Queue
 import heapq
 import copy
 import lightning_proc
+import routing.recursive_halve as rh
 
 def findpaths(G, payment, k = 16):
     retry = 0
@@ -116,10 +117,29 @@ def find_next_nodes_balanced(G, bp, dst, paymentsize):
         else:
             return True, nextlist
         if total_adjusted_payment < paymentsize:
-            return False, []
+            success, nextlist = find_next_nodes_proportion(G, bp, dst, paymentsize)
+            return success, nextlist
         else:
+
             return True, nextlist
-    
+
+def find_next_nodes_proportion(G, bp, dst, paymentsize):
+    tmp_nextlist = []
+    nextlist = []
+    sum_cap = 0
+    for next in set(G.neighbors(bp)):
+        if nx.has_path(G, next, dst):
+            if (dis_Manhattan(G, next, dst) < dis_Manhattan(G, bp, dst)):
+                tmp_nextlist.append((next, G[bp][next]["capacity"]))
+                sum_cap += G[bp][next]["capacity"]
+    if(paymentsize > 0.9 * sum_cap):
+        return False, []
+    else:
+        for item in tmp_nextlist:
+            (next, next_cap) = item
+            nextlist.append((next, next_cap/sum_cap*paymentsize))
+    return True, nextlist  
+
 def update_graph_capacity(G, path, payment):
     for i in range(len(path) - 1):
         G[path[i]][path[i+1]]["capacity"] -= payment 
@@ -235,6 +255,7 @@ def split_routing(G, Pset, C, payment):
             for i in range(1, len(path)-1):
                 cur = len(path)-2-i 
                 tosent[cur] = tosent[cur+1] + tosent[cur+1] * G[path[cur]][path[cur+1]]["proportion_fee"] / 1000000 + G[path[cur]][path[cur+1]]["base_fee"]
+            transaction_fees += tosent[0] - sent
             tosents.append(tosent)
             for i in range(len(path)-1):
                 if G[path[i]][path[i+1]]['base_fee'] > 10000 or G[path[i]][path[i+1]]['proportion_fee'] > 1000:
@@ -272,7 +293,14 @@ def split_routing(G, Pset, C, payment):
             path = Pset[j]
             sent = C[j]
             tosent = tosents[j]
-            for i in range(breakpoint_i+1):
+            if j != breakpoint_p:
+                rb  = len(path) - 1
+            else:
+                rb = breakpoint_i 
+            for i in range(rb):
+                print(breakpoint_i)
+                print(path)
+                print(i)
                 G[path[i]][path[i+1]]["capacity"] += tosent[i]
                 G[path[i+1]][path[i]]["capacity"] -= tosent[i]
         # remove atomicity
@@ -305,6 +333,7 @@ def direct_routing(G, path, payment):
     #print("============================")
     tosent = [0] * (len(path) - 1) 
     tosent[len(path)-2] = payment_size + payment_size * G[path[len(path)-2]][path[len(path)-1]]["proportion_fee"] / 1000000 + G[path[len(path)-2]][path[len(path)-1]]["base_fee"]
+    transaction_fees = tosent[0] -  payment_size
     for i in range(1, len(path)-2):
         cur = len(path)-2-i 
         tosent[cur] = tosent[cur+1] + tosent[cur+1] * G[path[cur]][path[cur+1]]["proportion_fee"] / 1000000 + G[path[cur]][path[cur+1]]["base_fee"]
@@ -385,6 +414,7 @@ def routing(G, cur_payments):
         print(payment_size)
         flag_split = False
         success = False
+        flag_rh = False
         if dst in G.nodes[src]['local_dst']:
             cnt_path = 0
             print("local_dst")
@@ -414,7 +444,12 @@ def routing(G, cur_payments):
             if flag_split:
                 Pset, C = findpaths(G, payment_copy)
                 if not (Pset is None or C is None):
-                    success = True   
+                    success = True
+                else:
+                    Pset, C = rh.findpaths(G, payment_copy)
+                    if not (Pset is None or C is None):
+                        flag_rh = True
+                        success = True 
         if (dst not in G.nodes[src]['local_dst']) or (dst in  G.nodes[src]['local_dst'] and flag_split and not success ):
             path = greedy(G, src, dst)
             print("greedy path")
@@ -432,7 +467,12 @@ def routing(G, cur_payments):
                         if not (Pset is None or C is None):
                             success = True
                         else:
-                            print("split prob fail !!")
+                            Pset, C = rh.findpaths(G, payment_copy)
+                            if not (Pset is None or C is None):
+                                success = True
+                                flag_rh = True
+                            else:
+                                print("split prob fail !!")
                         break
             else:
                 print("split prob")
@@ -441,24 +481,31 @@ def routing(G, cur_payments):
                 if not (Pset is None or C is None):
                     success = True
                 else:
-                    print("split prob fail !!")
+                    Pset, C = rh.findpaths(G, payment_copy)
+                    if not (Pset is None or C is None):
+                        success = True
+                        flag_rh = True
+                    else:
+                        print("split prob fail !!")
 
         if success and flag_split:
-            split_success, transaction_fees = split_routing(G, Pset, C, payment_copy)
+            split_success, transaction_fee = split_routing(G, Pset, C, payment_copy)
             if split_success is True:
                 print("split!") 
                 num_delivered += 1
                 num_splited += 1
                 throughput_pay += payment_size
-                throughput_total += payment_size + transaction_fees  
+                throughput_total += payment_size + transaction_fee
+                transaction_fees += transaction_fee
         elif not (flag_split):
-            direct_success, transaction_fees = direct_routing(G, path, payment_copy)
+            direct_success, transaction_fee = direct_routing(G, path, payment_copy)
             if direct_success is True:
                 print("direct!") 
                 num_delivered += 1
                 num_direct += 1
                 throughput_pay += payment_size
-                throughput_total += payment_size + transaction_fees
+                throughput_total += payment_size + transaction_fee
+                transaction_fees += transaction_fee
                 #update(G, src, dst)    
 
 
@@ -466,7 +513,9 @@ def routing(G, cur_payments):
     print(num_splited)
     print(num_direct)
     success_ratio = float(num_delivered/len(cur_payments))
+    print(success_ratio)
     success_volume = throughput_pay/overallpayment
+    print(success_volume)
     print(throughput_pay)
     print(overallpayment)
     print(transaction_fees)

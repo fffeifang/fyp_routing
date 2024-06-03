@@ -36,7 +36,7 @@ def routing(G, cur_payments, threshold, num_max_cache):
 
     throughput += sent 
     total_probing_messages += probing_messages
-    if not payment[2] > sent: 
+    if payment[2] <= sent: 
       num_delivered += 1
       total_max_path_length += max_path_length
 

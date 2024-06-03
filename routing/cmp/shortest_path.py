@@ -12,42 +12,48 @@ def direct_routing(G, path, payment):
     payment_size = payment[2]
     #total_probing_messages += len(path)-1
     transaction_fees = 0
-    breakpoint = -1 
+    # breakpoint = -1 
     path_cap = sys.maxsize
-
     #double check(?)
     for i in range(len(path)-1): 
-      path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"] - payment_size*G[path[i]][path[i+1]]["proportion_fee"] / 1000000 - G[path[i]][path[i+1]]["base_fee"])
+      path_cap = np.minimum(path_cap, G[path[i]][path[i+1]]["capacity"])
     
     if (path_cap > payment_size):
         sent = payment_size
     else:
         return False, None
-    #print("============================")
+    print("============================")
     fee = [0] * (len(path) - 1) 
     fee[len(path)-2] = sent + sent * G[path[len(path)-2]][path[len(path)-1]]["proportion_fee"] / 1000000 + G[path[len(path)-2]][path[len(path)-1]]["base_fee"]
     for i in range(1, len(path)-1):
       cur = len(path)-2-i 
       fee[cur] = fee[cur+1] + fee[cur+1] * G[path[cur]][path[cur+1]]["proportion_fee"] / 1000000 + G[path[cur]][path[cur+1]]["base_fee"]
-
+    print(sent)
+    print(fee)
     for i in range(len(path)-1):
+        if(0.9 * G[path[i]][path[i+1]]["capacity"] < fee[i]):# fail, roll back
+          for j in range(i):
+            G[path[j]][path[j+1]]["capacity"] += fee[i]
+            G[path[j]][path[j+1]]["capacity"] -= fee[i]
+          # remove atomicity
+          return False, None 
         G[path[i]][path[i+1]]["capacity"] -= fee[i]
         G[path[i+1]][path[i]]["capacity"] += fee[i]
-        if( G[path[i]][path[i+1]]["capacity"] < 0):
-            breakpoint = i
-            break
+        # if( G[path[i]][path[i+1]]["capacity"] < 0):
+        #     breakpoint = i
+        #     break
         transaction_fees += fee[i] - payment_size
+    return True, transaction_fees 
+    # if(breakpoint != -1):# fail, roll back
+    #     for i in range(breakpoint):
+    #         G[path[i]][path[i+1]]["capacity"] += fee[i]
+    #         G[path[i+1]][path[i]]["capacity"] -= fee[i]
+    #     # remove atomicity
+    #     return False, None
 
-    if(breakpoint != -1):# fail, roll back
-        for i in range(breakpoint+1):
-            G[path[i]][path[i+1]]["capacity"] += fee[i]
-            G[path[i+1]][path[i]]["capacity"] -= fee[i]
-        # remove atomicity
-        return False, None
-
-    else: 
-        print("direct成功")
-        return True, transaction_fees
+    # else: 
+    #     print("direct成功")
+    #     return True, transaction_fees
     
 def routing(G, cur_payments):  
   throughput_pay = 0
